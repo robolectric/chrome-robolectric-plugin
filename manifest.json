@@ -3,8 +3,13 @@
 
   "name": "Robolectric",
 //  "default_locale": "en",
-  "description": "This extension shows a Google Image search result for the current page",
-  "version": "1.0",
+  "description": "Adds Robolectric documentation to the Android developer docs.",
+  "version": "0.1-SNAPSHOT",
+  "icons": {
+    "16": "main/images/robolectric-icon.png",
+    "48": "main/images/robolectric-stacked.png",
+    "128": "main/images/robolectric-stacked.png"
+  },
 
   "browser_action": {
     "default_icon": "main/images/robolectric-icon.png",
