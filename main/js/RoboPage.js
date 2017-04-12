@@ -117,28 +117,68 @@ RoboPage.prototype.extractSignature = function(html) {
 };
 
 RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
-  // add notes to @Implemented methods...
+  var allShadowMethods = classJavadoc.methods;
+  var shadowMethodIndex = 0;
+
+  // insert shadow methods and add notes to @Implemented methods...
   document.querySelectorAll('div.api pre.api-signature').forEach(function(node) {
     var html = node.innerHTML;
     var signature = this.extractSignature(html);
+    console.log('inspecting', signature, node);
 
     if (signature) {
-      var shadowMethodDesc = classJavadoc.findMethod(signature);
-      if (shadowMethodDesc && shadowMethodDesc.documentation) {
+      console.log('signature', signature);
+      var insertionPoint = node.parentElement.previousElementSibling;
+
+      for (var i = shadowMethodIndex; i < allShadowMethods.length; i++) {
+        var methodJavadoc = allShadowMethods[i];
+        if (methodJavadoc.signature < signature) {
+          var anchor = domNode('a', {'name': 'shadow:' + methodJavadoc.signature});
+          insertionPoint.parentNode.insertBefore(anchor, insertionPoint);
+
+          var methodDiv = domNode('div', {'class': 'api apilevel-0'},
+              domNode('h3', {'class': 'api-name'}, 'shadowOf().', methodJavadoc.name),
+              domNode('div', {'class': 'api-level'},
+                  domNode('div', {}, 'Robolectric shadow method')
+              ),
+              domNode('pre', {'class': 'api-signature no-pretty-print'},
+                  this.domClassNames(methodJavadoc.returnType),
+                  ' ',
+                  methodJavadoc.name,
+                  '(',
+                  this.domClassNames(methodJavadoc.paramTypes),
+                  ')'
+              )
+          );
+
+          methodJavadoc.paragraphs().forEach(function(para) {
+            var p = domNode('p', {});
+            p.innerHTML = para;
+            methodDiv.appendChild(p);
+          });
+
+          console.log('tags', methodJavadoc.tags());
+          methodJavadoc.tags().forEach(function(tag) {
+            var p = domNode('p', {}, tag);
+            methodDiv.appendChild(p);
+          });
+
+          insertionPoint.parentNode.insertBefore(methodDiv, insertionPoint);
+          console.log('should insert shadowOf().', methodJavadoc.signature);
+        }
+        shadowMethodIndex = i;
+      }
+
+      var shadowMethodJavadoc = classJavadoc.findMethod(signature);
+      if (shadowMethodJavadoc && shadowMethodJavadoc.documentation) {
+        shadowMethodIndex = allShadowMethods.indexOf(shadowMethodJavadoc) + 1;
+        console.log(signature, 'at', shadowMethodIndex);
+
         var memberDiv = node.parentElement;
         var anchorDiv = memberDiv.previousElementSibling;
         var newDiv = this.html('<div class="robolectric method"/>');
         memberDiv.parentElement.insertBefore(newDiv, memberDiv.nextSibling);
-        var docHtml = shadowMethodDesc.documentation.replace(/\{(@[^\s]+)\s+([^}]+)\}/g, function(full, tag, str) {
-          switch (tag) {
-            case '@code':
-              return '<code>' + str + '</code>';
-            case '@link':
-              return '<a href="???">' + str + '</a>';
-            default:
-              return full;
-          }
-        });
+        var docHtml = Javadoc.processTags(shadowMethodJavadoc.documentation);
         newDiv.innerHTML = "<p><b><i>Robolectric notes:</i></b></p>\n" + docHtml;
       }
     }
@@ -147,34 +187,32 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
   var pubMethodsTable = document.getElementById('pubmethods');
   var shadowMethodsTable = this.html('<table class="responsive methods robolectric-shadow"><tbody><tr><th colspan="2"><h3>Shadow methods</h3></th></tr></tbody></table>');
   pubMethodsTable.parentNode.insertBefore(shadowMethodsTable, pubMethodsTable.nextElementSibling);
-  classJavadoc.methods.forEach(function(methodJavadoc) {
+  allShadowMethods.forEach(function(methodJavadoc) {
     if (methodJavadoc.isImplementation) return;
 
-    var row = document.createElement('tr');
-    row.classList.add('api');
-    row.classList.add('apilevel-0');
-    row.classList.add('shadow');
-
-    var td1 = document.createElement('td');
-    row.appendChild(td1);
-
-    var td1Code = document.createElement('code');
-    td1.appendChild(td1Code);
-    td1Code.appendChild(this.domClassNames(methodJavadoc.returnType));
-
-    var td2 = document.createElement('td');
-    td2.setAttribute('width', '100%');
-    row.appendChild(td2);
-
-    var td2Code = document.createElement('code');
-    td2Code.appendChild(document.createTextNode('shadowOf().' + methodJavadoc.name + '('));
-    td2Code.appendChild(this.domClassNames(methodJavadoc.paramTypes));
-    td2Code.appendChild(document.createTextNode(')'));
-    td2.appendChild(td2Code);
+    var td2;
+    var row = domNode('tr', {'class': 'api apilevel-0 shadow'},
+        domNode('td', {},
+            domNode('code', {},
+                this.domClassNames(methodJavadoc.returnType)
+            )
+        ),
+        td2 = domNode('td', {'width': '100%'},
+            domNode('code', {},
+                'shadowOf().',
+                domNode('a', {'href': '#shadow:' + methodJavadoc.signature},
+                    methodJavadoc.name
+                ),
+                '(',
+                this.domClassNames(methodJavadoc.paramTypes),
+                ')'
+            )
+        )
+    );
 
     if (methodJavadoc.documentation) {
-      var p = document.createElement('p');
-      p.innerHTML = methodJavadoc.documentation.split(/\n\n/)[0]; // first paragraph
+      var firstParagraph = methodJavadoc.documentation.split(/\n\n/)[0]; // first paragraph
+      var p = domNode('p', {}, firstParagraph);
       td2.appendChild(p);
     }
 
@@ -186,6 +224,8 @@ RoboPage.prototype.domClassNames = function(className) {
   var descs = this.prettyClassNames(className);
   var dom = document.createElement('span');
   for (var i = 0; i < descs.length; i++) {
+    if (i > 0) dom.appendChild(document.createTextNode(', '));
+
     var desc = descs[i];
     this.domClassNameRecursive_(desc, dom);
   }
@@ -195,7 +235,9 @@ RoboPage.prototype.domClassNames = function(className) {
 RoboPage.prototype.domClassNameRecursive_ = function(classDesc, dom) {
   if (classDesc[1].match(/^[A-Z]/)) {
     var anchor = document.createElement('a');
-    anchor.href = '/path/to/' + classDesc[0];
+
+    var className = classDesc[0];
+    anchor.href = Javadoc.urlFor(className);
     anchor.innerText = classDesc[1];
     dom.appendChild(anchor);
   } else {
@@ -228,11 +270,14 @@ RoboPage.prototype.prettyClassNames = function(classNames) {
   var l = classNames.length;
   for (var i = 0; i < l; i++) {
     var c = classNames.charAt(i);
+
+    //noinspection FallThroughInSwitchStatementJS
     switch (c) {
-      case '<':
       case '>':
+        if (cur == '') chomp = '';
+      case '<':
       case ',':
-        chomp = cur;
+        if (cur) chomp = cur;
         cur = "";
         break;
 
@@ -240,14 +285,16 @@ RoboPage.prototype.prettyClassNames = function(classNames) {
         cur += c;
     }
 
-    if (chomp == null && i + 1 == l) {
+    if (chomp == null && i + 1 == l && cur) {
       chomp = cur;
     }
 
-    if (chomp) {
+    if (chomp != null) {
       chomp = chomp.trim();
-      var newNode = [chomp, chomp.match(/[^.]+$/)[0], []];
-      curNode[2].push(newNode);
+      if (chomp) {
+        var newNode = [chomp, chomp.match(/[^.]+$/)[0], []];
+        curNode[2].push(newNode);
+      }
       chomp = null;
 
       switch (c) {

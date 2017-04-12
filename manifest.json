@@ -4,7 +4,7 @@
   "name": "Robolectric",
 //  "default_locale": "en",
   "description": "Adds Robolectric documentation to the Android developer docs.",
-  "version": "0.1-SNAPSHOT",
+  "version": "0.1",
   "icons": {
     "16": "main/images/robolectric-icon.png",
     "48": "main/images/robolectric-stacked.png",
@@ -35,7 +35,8 @@
       "matches": ["https://developer.android.com/*"],
       "css": ["main/css/robodac.css"],
       "js": [
-        "main/js/ClassJavadoc.js",
+        "main/js/util.js",
+        "main/js/Javadoc.js",
         "main/js/RoboPage.js",
         "main/js/content-script.js"
       ],

@@ -66,5 +66,35 @@ describe("RoboPage", function() {
             ['boolean', 'boolean', []]
           ]);
     });
+
+    it("should handle params with generics", function() {
+      expect(roboPage.prettyClassNames('java.util.List<java.util.Map<java.lang.String,java.lang.Integer>>, int'))
+          .toEqual([
+            ['java.util.List', 'List', [
+              ['java.util.Map', 'Map', [
+                ['java.lang.String', 'String', []],
+                ['java.lang.Integer', 'Integer', []]
+              ]]
+            ]],
+            ['int', 'int', []]
+          ]);
+    });
+  });
+
+  describe("#domClassNames", function() {
+    it("should read correctly", function() {
+      var dom = roboPage.domClassNames('java.util.List<java.util.Map<java.lang.String,java.lang.Integer>>, int');
+      expect(dom.innerText).toEqual("List<Map<String, Integer>>, int");
+    });
+
+    it("should have correct links", function() {
+      var dom = roboPage.domClassNames('java.util.List<java.util.Map<java.lang.String,java.lang.Integer>>, int');
+      expect(dom.innerHTML).toEqual('<a href="/reference/java/util/List.html">List</a>&lt;<a href="/reference/java/util/Map.html">Map</a>&lt;<a href="/reference/java/lang/String.html">String</a>, <a href="/reference/java/lang/Integer.html">Integer</a>&gt;&gt;, int');
+    });
+
+    it("should have correct Robolectric links", function() {
+      var dom = roboPage.domClassNames('java.util.List<org.robolectric.shadows.ShadowContentResolver>');
+      expect(dom.innerHTML).toEqual('<a href="/reference/java/util/List.html">List</a>&lt;<a href="http://robolectric.org/javadoc/latest/org/robolectric/shadows/ShadowContentResolver.html">ShadowContentResolver</a>&gt;');
+    });
   });
 });
