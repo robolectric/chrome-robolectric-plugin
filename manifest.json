@@ -24,7 +24,7 @@
     {
       "matches": ["https://developer.android.com/*"],
       "css": ["robodac.css"],
-      "js": ["content-script.js"],
+      "js": ["RoboPage.js", "content-script.js"],
       "run_at": "document_start"
     }
   ]

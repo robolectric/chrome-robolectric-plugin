@@ -11,13 +11,20 @@
       body {
         font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
         font-size: 100%;
+        color: #5b8f4a;
       }
+
       #status {
         /* avoid an excessively wide status text */
         white-space: pre;
         text-overflow: ellipsis;
         overflow: hidden;
         max-width: 400px;
+      }
+
+      #options {
+        width: 100%;
+        padding: 1em;
       }
     </style>
 
@@ -31,8 +38,17 @@
   </head>
   <body>
     <img src="logotype.png" alt="Robolectric" width="348" height="60"/>
+
+    <div id="options">
+      <form>
+        <input id="showShadowMethods" type="checkbox"><label for="showShadowMethods">Show Shadow Methods</label>
+        <br/>
+        <br/>
+        <button>Do Other Things!</button>
+      </form>
+    </div>
+
     <div id="status"></div>
-    <img id="image-result" hidden>
   </body>
 </html>
 
