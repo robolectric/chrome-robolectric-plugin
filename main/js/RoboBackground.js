@@ -1,5 +1,6 @@
 function RoboBackground() {
-  this.urlBase = 'https://localhost:8080';
+  // this.urlBase = 'https://localhost:8080';
+  this.urlBase = 'http://robolectric.org';
 }
 
 RoboBackground.prototype.getJson = function(url, onLoadFn) {
@@ -22,7 +23,7 @@ RoboBackground.prototype.onMessage = function(request, callback) {
       break;
 
     case 'getCtsResults':
-      this.getJson('/cts-results.json', callback);
+      this.getJson('/assets/cts-results.json', callback);
       break;
 
   }

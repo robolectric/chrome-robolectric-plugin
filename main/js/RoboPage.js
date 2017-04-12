@@ -1,5 +1,6 @@
 function RoboPage() {
-  this.roboHome = 'https://localhost:8080';
+  // this.roboHome = 'https://localhost:8080';
+  this.roboHome = 'https://robolectric.github.io';
 
   this.isReady = false;
   this._onReadyCallbacks = [];
@@ -78,8 +79,10 @@ RoboPage.prototype.init = function() {
     this.roboPanel.innerHTML += '<br/>' + className;
 
     this.getJavadoc(className, function(javaDoc) {
+      var classJavadoc = new ClassJavadoc(javaDoc);
+
       this.whenReady(function() {
-        this.decorateJavadocPage(javaDoc);
+        this.decorateJavadocPage(classJavadoc);
         roboLogo.style.opacity = '.25';
       }.bind(this));
     }.bind(this));
@@ -90,7 +93,6 @@ RoboPage.htmlRE = /<[a]\s+href=['"]([^'"]+)['"]>([^<]+)<\/a>/g;
 RoboPage.httpRE = /\/reference\/(.+)\.html/;
 RoboPage.arrayRE = /([\[\]]+)$/;
 RoboPage.pageSignatureRE = /^([^\s]+)\s+([^\s]+)\s*\(([^)]*)\)/;
-RoboPage.jsonSignatureRE = /^([^\s]+)\(([^)]*)\)/;
 
 RoboPage.prototype.extractSignature = function(html) {
   html = html.replace(RoboPage.htmlRE, function(full, url, str) {
@@ -114,14 +116,14 @@ RoboPage.prototype.extractSignature = function(html) {
   return methodName + '(' + params.join(',') + ')';
 };
 
-RoboPage.prototype.decorateJavadocPage = function(javaDoc) {
+RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
   // add notes to @Implemented methods...
   document.querySelectorAll('div.api pre.api-signature').forEach(function(node) {
     var html = node.innerHTML;
     var signature = this.extractSignature(html);
 
     if (signature) {
-      var shadowMethodDesc = javaDoc['methods'][signature];
+      var shadowMethodDesc = classJavadoc.findMethod(signature);
       if (shadowMethodDesc && shadowMethodDesc.documentation) {
         var memberDiv = node.parentElement;
         var anchorDiv = memberDiv.previousElementSibling;
@@ -145,9 +147,7 @@ RoboPage.prototype.decorateJavadocPage = function(javaDoc) {
   var pubMethodsTable = document.getElementById('pubmethods');
   var shadowMethodsTable = this.html('<table class="responsive methods robolectric-shadow"><tbody><tr><th colspan="2"><h3>Shadow methods</h3></th></tr></tbody></table>');
   pubMethodsTable.parentNode.insertBefore(shadowMethodsTable, pubMethodsTable.nextElementSibling);
-  Object.keys(javaDoc['methods']).forEach(function(methodSignature) {
-    var methodJavadoc = javaDoc['methods'][methodSignature];
-
+  classJavadoc.methods.forEach(function(methodJavadoc) {
     if (methodJavadoc.isImplementation) return;
 
     var row = document.createElement('tr');
@@ -167,9 +167,8 @@ RoboPage.prototype.decorateJavadocPage = function(javaDoc) {
     row.appendChild(td2);
 
     var td2Code = document.createElement('code');
-    var match = RoboPage.jsonSignatureRE.exec(methodSignature);
-    td2Code.appendChild(document.createTextNode('shadowOf().' + match[1] + '('));
-    td2Code.appendChild(this.domClassNames(match[2]));
+    td2Code.appendChild(document.createTextNode('shadowOf().' + methodJavadoc.name + '('));
+    td2Code.appendChild(this.domClassNames(methodJavadoc.paramTypes));
     td2Code.appendChild(document.createTextNode(')'));
     td2.appendChild(td2Code);
 

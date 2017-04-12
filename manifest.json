@@ -13,18 +13,27 @@
   },
   "permissions": [
     "activeTab",
+    "http://robolectric.org/",
     "https://robolectric.org/",
+    "https://robolectric.github.io/",
     "https://localhost:8080/"
   ],
   "background": {
-    "scripts": ["main/js/RoboBackground.js", "main/js/background.js"],
+    "scripts": [
+      "main/js/RoboBackground.js",
+      "main/js/background.js"
+    ],
     "pesistent": false
   },
   "content_scripts": [
     {
       "matches": ["https://developer.android.com/*"],
       "css": ["main/css/robodac.css"],
-      "js": ["main/js/RoboPage.js", "main/js/content-script.js"],
+      "js": [
+        "main/js/ClassJavadoc.js",
+        "main/js/RoboPage.js",
+        "main/js/content-script.js"
+      ],
       "run_at": "document_start"
     }
   ]
