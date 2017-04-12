@@ -168,7 +168,7 @@ RoboPage.prototype.decorateJavadocPage = function (javaDoc) {
 
         if (methodJavadoc.documentation) {
             var p = document.createElement('p');
-            p.innerHTML = methodJavadoc.documentation.split(/\n/)[0];
+            p.innerHTML = methodJavadoc.documentation.split(/\n\n/)[0]; // first paragraph
             td2.appendChild(p);
         }
 
@@ -187,10 +187,15 @@ RoboPage.prototype.domClassNames = function (className) {
 };
 
 RoboPage.prototype.domClassNameRecursive_ = function (classDesc, dom) {
-    var anchor = document.createElement('a');
-    anchor.href = '/path/to/' + classDesc[0];
-    anchor.innerText = classDesc[1];
-    dom.appendChild(anchor);
+    if (classDesc[1].match(/^[A-Z]/)) {
+        var anchor = document.createElement('a');
+        anchor.href = '/path/to/' + classDesc[0];
+        anchor.innerText = classDesc[1];
+        dom.appendChild(anchor);
+    } else {
+        // primitive
+        dom.appendChild(document.createTextNode(classDesc[1]));
+    }
 
     var generics = classDesc[2];
     if (generics.length > 0) {
