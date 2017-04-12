@@ -1,0 +1,31 @@
+{
+  "manifest_version": 2,
+
+  "name": "Robolectric",
+//  "default_locale": "en",
+  "description": "This extension shows a Google Image search result for the current page",
+  "version": "1.0",
+
+  "browser_action": {
+    "default_icon": "robolectric-icon.png",
+    "default_popup": "popup.html",
+    "default_title": "Robolectric"
+  },
+  "permissions": [
+    "activeTab",
+    "https://robolectric.org/",
+    "https://localhost:8080/"
+  ],
+  "background": {
+    "scripts": ["robodac.js"],
+    "pesistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://developer.android.com/*"],
+      "css": ["robodac.css"],
+      "js": ["content-script.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
