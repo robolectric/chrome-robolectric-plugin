@@ -91,6 +91,7 @@ RoboPage.prototype.init = function () {
 
 RoboPage.htmlRE = /<[a]\s+href=['"]([^'"]+)['"]>([^<]+)<\/a>/g;
 RoboPage.httpRE = /\/reference\/(.+)\.html/;
+RoboPage.arrayRE = /([\[\]]+)$/;
 RoboPage.pageSignatureRE = /^([^\s]+)\s+([^\s]+)\s*\(([^)]*)\)/;
 RoboPage.jsonSignatureRE = /^([^\s]+)\(([^)]*)\)/;
 
@@ -98,10 +99,12 @@ RoboPage.prototype.decorateJavadocPage = function (javaDoc) {
     // add notes to @Implemented methods...
     document.querySelectorAll('div.api pre.api-signature').forEach(function (node) {
         var html = node.innerHTML;
-        html = html.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(RoboPage.htmlRE, function (full, url, str) {
+        html = html.replace(RoboPage.htmlRE, function (full, url, str) {
+            console.log('match >', full, url, str);
             var urlMatch = RoboPage.httpRE.exec(url);
-            return urlMatch[1].replace(/\//g, '.');
-        });
+            var arrayMatch = RoboPage.arrayRE.exec(str);
+            return urlMatch[1].replace(/\//g, '.') + (arrayMatch ? arrayMatch[0] : '');
+        }).replace(/&lt;/g, '<').replace(/&gt;/g, '>');
         var match = RoboPage.pageSignatureRE.exec(html);
         if (match) {
             var returnType = match[1];
