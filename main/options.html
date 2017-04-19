@@ -10,7 +10,7 @@
   <style>
     body {
       font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
-      font-size: 100%;
+      font-size: 90%;
       color: #5b8f4a;
     }
 
@@ -34,15 +34,24 @@
     -
     - [1]: https://developer.chrome.com/extensions/contentSecurityPolicy
    -->
+  <script src="js/RoboDefaults.js"></script>
   <script src="js/RoboOptions.js"></script>
+  <script src="js/options.js" defer></script>
 </head>
 <body>
-<img src="images/logotype.png" alt="Robolectric" width="348" height="60"/>
 
-<p>Maybe you'd like to visit the <a href="https://developer.android.com/reference/classes.html" target="_blank">Android docs</a>?</p>
+<div id="options">
+  <input id="prodSource" name="source" type="radio"/> <label for="prodSource">Prod: <span id="prodLocation"></span></label>
+  <br/>
+  <input id="devSource" name="source" type="radio"/> <label for="devSource">Dev: <input id="devLocation" type="text"/></label>
 
-<p>Here's a <a href="https://developer.android.com/reference/android/content/ContentResolver.html" target="_blank">nice one</a>.</p>
+  <br/>
+  <br/>
 
+  <button id="save">Save</button>
+</div>
+
+<div id="status"></div>
 </body>
 </html>
 

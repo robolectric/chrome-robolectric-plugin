@@ -1,15 +1,65 @@
 function Javadoc() {
+  this.imports = {
+    'Boolean': 'java.lang.Boolean',
+    'Byte': 'java.lang.Byte',
+    'Character': 'java.lang.Character',
+    'Class': 'java.lang.Class',
+    'ClassLoader': 'java.lang.ClassLoader',
+    'Double': 'java.lang.Double',
+    'Enum': 'java.lang.Enum',
+    'Float': 'java.lang.Float',
+    'Integer': 'java.lang.Integer',
+    'Long': 'java.lang.Long',
+    'Math': 'java.lang.Math',
+    'Number': 'java.lang.Number',
+    'Object': 'java.lang.Object',
+    'Package': 'java.lang.Package',
+    'Runtime': 'java.lang.Runtime',
+    'Short': 'java.lang.Short',
+    'String': 'java.lang.String',
+    'StringBuffer': 'java.lang.StringBuffer',
+    'StringBuilder': 'java.lang.StringBuilder',
+    'System': 'java.lang.System',
+    'Thread': 'java.lang.Thread',
+    'Throwable': 'java.lang.Throwable',
+    'Void': 'java.lang.Void',
+  };
 }
 
-Javadoc.urlFor = function(className) {
+Javadoc.prototype.urlFor = function(signature) {
+  var parts = signature.match(/^([^#]*)(#.*)?$/);
+  var className = parts[1];
+  var methodPart = parts[2] || '';
+
+  var imported = this.imports[className];
+  if (imported) {
+    className = imported;
+  }
+
+  if (methodPart) {
+    var buf = '';
+    var soFar = '';
+    for (var i = 0; i < methodPart.length; i++) {
+      var c = methodPart.charAt(i);
+      if (c.match(/[ ,\[\]\<\>\(\)]/)) {
+        buf += this.imports[soFar] || soFar;
+        soFar = '';
+        buf += c;
+      } else {
+        soFar += c;
+      }
+    }
+    methodPart = buf;
+  }
+
   if (className.match(/^org\.robolectric\./)) {
-    return 'http://robolectric.org/javadoc/latest/' + className.replace(/\./g, '/') + '.html';
+    return 'http://robolectric.org/javadoc/latest/' + className.replace(/\./g, '/') + '.html' + methodPart;
   } else {
-    return '/reference/' + className.replace(/\./g, '/') + '.html';
+    return '/reference/' + className.replace(/\./g, '/') + '.html' + methodPart;
   }
 };
 
-Javadoc.processTags = function(text) {
+Javadoc.prototype.processTags = function(text) {
   if (text == null) return '';
 
   return text.replace(/\{(@[^\s]+)\s+([^}]+)\}/g, function(full, tag, str) {
@@ -18,31 +68,42 @@ Javadoc.processTags = function(text) {
         return domNode('span', {}, domNode('code', {}, str)).innerHTML;
       case '@link':
         var parts = str.split(/\./);
-        return domNode('span', {}, domNode('a', {'href': Javadoc.urlFor(str)}, parts[parts.length - 1])).innerHTML;
+        return domNode('span', {}, domNode('a', {'href': this.urlFor(str)}, parts[parts.length - 1])).innerHTML;
       default:
         return full;
     }
-  });
+  }.bind(this));
 };
 
 function ClassJavadoc(json) {
+  Javadoc.apply(this);
+
   this.json = json;
   this.methods_ = {};
   this.methods = [];
 
   var methods = this.json['methods'];
   Object.keys(methods).sort().forEach(function(signature) {
-    var methodJavadoc = new MethodJavadoc(signature, methods[signature]);
+    var methodJavadoc = new MethodJavadoc(signature, methods[signature], this);
     this.methods_[signature] = methodJavadoc;
     this.methods.push(methodJavadoc);
   }.bind(this));
+
+  this.json['imports'].reverse().forEach(function(className) {
+    this.imports[className.match(/([^.]+)$/)[1]] = className;
+  }.bind(this));
+  console.log('IMPORTS', this.imports);
 }
+
+ClassJavadoc.prototype = Object.create(Javadoc.prototype);
 
 ClassJavadoc.prototype.findMethod = function(signature) {
   return this.methods_[signature];
 };
 
-function MethodJavadoc(signature, json) {
+function MethodJavadoc(signature, json, classJavadoc) {
+  Javadoc.apply(this);
+
   this.signature = signature;
   this.isImplementation = json.isImplementation;
   this.returnType = json.returnType;
@@ -52,7 +113,11 @@ function MethodJavadoc(signature, json) {
   this.paramTypes = match[2];
 
   this.documentation = json.documentation;
+
+  this.imports = classJavadoc.imports;
 }
+
+MethodJavadoc.prototype = Object.create(Javadoc.prototype);
 
 MethodJavadoc.prototype.process_ = function() {
   if (this.processed_) {
@@ -87,14 +152,14 @@ MethodJavadoc.prototype.process_ = function() {
 
 MethodJavadoc.prototype.summary = function() {
   this.process_();
-  return Javadoc.processTags(this.paragraphs_[0]);
+  return this.processTags(this.paragraphs_[0]);
 };
 
 MethodJavadoc.prototype.paragraphs = function() {
   this.process_();
   return this.paragraphs_.map(function(para) {
-    return Javadoc.processTags(para.trim());
-  });
+    return this.processTags(para.trim());
+  }.bind(this));
 };
 
 MethodJavadoc.prototype.tags = function() {

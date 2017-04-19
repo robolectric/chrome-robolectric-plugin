@@ -72,6 +72,7 @@ RoboPage.prototype.init = function() {
 
   if (document.location.pathname.startsWith('/reference/')) {
     this.androidClassName = document.location.pathname.split('/').slice(2).join('.').replace('.html', '');
+    console.log('android class name:', this.androidClassName);
   }
 
   if (this.androidClassName) {
@@ -178,7 +179,7 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
         var anchorDiv = memberDiv.previousElementSibling;
         var newDiv = this.html('<div class="robolectric method"/>');
         memberDiv.parentElement.insertBefore(newDiv, memberDiv.nextSibling);
-        var docHtml = Javadoc.processTags(shadowMethodJavadoc.documentation);
+        var docHtml = shadowMethodJavadoc.processTags(shadowMethodJavadoc.documentation);
         newDiv.innerHTML = "<p><b><i>Robolectric notes:</i></b></p>\n" + docHtml;
       }
     }
@@ -237,7 +238,7 @@ RoboPage.prototype.domClassNameRecursive_ = function(classDesc, dom) {
     var anchor = document.createElement('a');
 
     var className = classDesc[0];
-    anchor.href = Javadoc.urlFor(className);
+    anchor.href = new Javadoc().urlFor(className);
     anchor.innerText = classDesc[1];
     dom.appendChild(anchor);
   } else {

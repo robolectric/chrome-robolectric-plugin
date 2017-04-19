@@ -16,7 +16,12 @@
     "default_popup": "main/popup.html",
     "default_title": "Robolectric"
   },
+  "options_ui": {
+    "page": "main/options.html",
+    "chrome_style": true
+  },
   "permissions": [
+    "storage",
     "activeTab",
     "http://robolectric.org/",
     "https://robolectric.org/",
@@ -25,6 +30,8 @@
   ],
   "background": {
     "scripts": [
+      "main/js/RoboDefaults.js",
+      "main/js/RoboOptions.js",
       "main/js/RoboBackground.js",
       "main/js/background.js"
     ],

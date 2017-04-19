@@ -1,6 +1,9 @@
 function RoboBackground() {
-  // this.urlBase = 'https://localhost:8080';
-  this.urlBase = 'http://robolectric.org';
+  new RoboOptions().load(function(values) {
+    this.urlBase = values.source == 'prod' ? RoboDefaults.prodLocation : values.devLocation;
+    this.urlBase = this.urlBase.match(/(.*?)\/*$/)[1];
+    console.log('urlBase', this.urlBase);
+  }.bind(this));
 }
 
 RoboBackground.prototype.getJson = function(url, onLoadFn) {
