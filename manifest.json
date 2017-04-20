@@ -2,13 +2,12 @@
   "manifest_version": 2,
 
   "name": "Robolectric",
-//  "default_locale": "en",
   "description": "Adds Robolectric documentation to the Android developer docs.",
-  "version": "0.1",
+  "version": "0.1.420",
   "icons": {
     "16": "main/images/robolectric-icon.png",
-    "48": "main/images/robolectric-stacked.png",
-    "128": "main/images/robolectric-stacked.png"
+    "48": "main/images/robolectric-48.png",
+    "128": "main/images/robolectric-128.png"
   },
 
   "browser_action": {

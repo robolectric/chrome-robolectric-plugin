@@ -64,7 +64,7 @@ RoboPage.prototype.getCtsResults = function(callback) {
 RoboPage.prototype.init = function() {
   this.connectToBackground();
 
-  this.roboPanel = this.html('<div style="position: fixed; width: 140px; right: 2em; top: 6em; z-index: 100;"/>');
+  this.roboPanel = this.html('<div style="position: absolute; width: 140px; right: 2em; top: 6em; z-index: 100;"/>');
   this.roboPanel.innerHTML = '<img src="' + this.roboHome + '/images/robolectric-stacked.png" alt="Robolectric" style="opacity: .1;"/>';
   this.whenReady(function() {
     document.body.appendChild(this.roboPanel);
@@ -453,7 +453,7 @@ RoboPage.prototype.gotCtsResults = function(json) {
     results = this._ctsResults['all'];
     if (results) {
       total = results.pass.length + results.fail.length;
-      this.roboPanel.appendChild(this.html('<div>All CTS: ' + results.pass + '/' + total + "</div>"));
+      this.roboPanel.appendChild(this.html('<div>All CTS: ' + results.pass.length + '/' + total + "</div>"));
     }
 
     document.querySelectorAll('.dac-reference-nav-list li a').forEach(function(node) {
