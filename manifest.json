@@ -42,6 +42,7 @@
       "matches": ["https://developer.android.com/*"],
       "css": ["main/css/robodac.css"],
       "js": [
+        "main/js/lib/showdown-1.6.4.min.js",
         "main/js/util.js",
         "main/js/Javadoc.js",
         "main/js/RoboPage.js",

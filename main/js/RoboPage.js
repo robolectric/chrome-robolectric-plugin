@@ -8,6 +8,8 @@ function RoboPage() {
   this._ctsResults = {};
 
   this.androidClassName = null;
+
+  this.converter_ = new showdown.Converter();
 }
 
 RoboPage.prototype.connectToBackground = function(command, args, callback) {
@@ -117,57 +119,109 @@ RoboPage.prototype.extractSignature = function(html) {
   return methodName + '(' + params.join(',') + ')';
 };
 
+RoboPage.prototype.insertShadowMethod = function(methodJavadoc, insertionPoint) {
+  console.log('insertShadowMethod', methodJavadoc.name, insertionPoint);
+  var anchor = domNode('a', {'name': 'shadow:' + methodJavadoc.signature});
+  insertionPoint.parentNode.insertBefore(anchor, insertionPoint);
+
+  var methodDiv = domNode('div', {'class': 'api apilevel-0'},
+      domNode('h3', {'class': 'api-name'}, 'shadowOf().', methodJavadoc.name),
+      domNode('div', {'class': 'api-level'},
+          domNode('div', {}, 'Robolectric shadow method')
+      ),
+      domNode('pre', {'class': 'api-signature no-pretty-print'},
+          this.domClassNames(methodJavadoc.returnType),
+          ' ',
+          methodJavadoc.name,
+          '(',
+          this.domClassNames(methodJavadoc.paramTypes, methodJavadoc.paramNames),
+          ')'
+      )
+  );
+
+  var p = domNode('p', {});
+  p.innerHTML = this.markdownToHtml(methodJavadoc.body());
+  methodDiv.appendChild(p);
+
+  console.log('tags', methodJavadoc.tags());
+  methodJavadoc.tags().forEach(function(tag) {
+    var match = tag.match(/@(\w+)\s+(.*)/);
+    var tagName = match[1];
+    var rest = match[2];
+    var tableHeader = null;
+    var tableRows = [];
+
+    switch (tagName) {
+      case 'deprecated':
+        tableHeader = 'Deprecated';
+        tableRows.push(['', this.html(this.markdownToHtml(methodJavadoc.processTags(rest)))]);
+        break;
+      case 'param':
+        tableHeader = 'Parameters';
+        var paramParts = rest.split(/ /);
+        var paramName = paramParts.shift();
+        var paramDesc = paramParts.join(' ');
+        tableRows.push([domNode('code', {}, paramName), this.html(this.markdownToHtml(methodJavadoc.processTags(paramDesc)))]);
+        break;
+      case 'return':
+        tableHeader = 'Returns';
+        tableRows.push([this.domClassNames(methodJavadoc.returnType), this.html(this.markdownToHtml(methodJavadoc.processTags(rest)))]);
+        break;
+    }
+
+    if (tableRows.length > 0) {
+      var tbody;
+      var table = domNode('table', {'class': 'responsive'},
+          tbody = domNode('tbody', {},
+              domNode('tr', {},
+                  domNode('th', {'colspan': '2'}, tableHeader)
+              )
+          )
+      );
+
+      tableRows.forEach(function(row) {
+        tbody.appendChild(
+            domNode('tr', {},
+                domNode('td', {}, row[0]),
+                domNode('td', {'width': '100%'}, row[1])
+            )
+        );
+      }.bind(this));
+      methodDiv.appendChild(table);
+    } else {
+      var p = domNode('p', {}, tag);
+      methodDiv.appendChild(p);
+    }
+  }.bind(this));
+
+  insertionPoint.parentNode.insertBefore(methodDiv, insertionPoint);
+  return {anchor: anchor, methodDiv: methodDiv, p: p};
+};
+
 RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
   var allShadowMethods = classJavadoc.methods;
   var shadowMethodIndex = 0;
+
+  console.log('allShadowMethods starts with', allShadowMethods[0].name);
 
   // insert shadow methods and add notes to @Implemented methods...
   document.querySelectorAll('div.api pre.api-signature').forEach(function(node) {
     var html = node.innerHTML;
     var signature = this.extractSignature(html);
-    console.log('inspecting', signature, node);
 
     if (signature) {
-      console.log('signature', signature);
+      console.log('inspecting', signature, node, 'first shadow method to consider is', (allShadowMethods[shadowMethodIndex] || {}).name);
+
       var insertionPoint = node.parentElement.previousElementSibling;
 
       for (var i = shadowMethodIndex; i < allShadowMethods.length; i++) {
         var methodJavadoc = allShadowMethods[i];
         if (methodJavadoc.signature < signature) {
-          var anchor = domNode('a', {'name': 'shadow:' + methodJavadoc.signature});
-          insertionPoint.parentNode.insertBefore(anchor, insertionPoint);
-
-          var methodDiv = domNode('div', {'class': 'api apilevel-0'},
-              domNode('h3', {'class': 'api-name'}, 'shadowOf().', methodJavadoc.name),
-              domNode('div', {'class': 'api-level'},
-                  domNode('div', {}, 'Robolectric shadow method')
-              ),
-              domNode('pre', {'class': 'api-signature no-pretty-print'},
-                  this.domClassNames(methodJavadoc.returnType),
-                  ' ',
-                  methodJavadoc.name,
-                  '(',
-                  this.domClassNames(methodJavadoc.paramTypes),
-                  ')'
-              )
-          );
-
-          methodJavadoc.paragraphs().forEach(function(para) {
-            var p = domNode('p', {});
-            p.innerHTML = para;
-            methodDiv.appendChild(p);
-          });
-
-          console.log('tags', methodJavadoc.tags());
-          methodJavadoc.tags().forEach(function(tag) {
-            var p = domNode('p', {}, tag);
-            methodDiv.appendChild(p);
-          });
-
-          insertionPoint.parentNode.insertBefore(methodDiv, insertionPoint);
-          console.log('should insert shadowOf().', methodJavadoc.signature);
+          this.insertShadowMethod(methodJavadoc, insertionPoint);
+          shadowMethodIndex = i + 1;
+        } else {
+          break;
         }
-        shadowMethodIndex = i;
       }
 
       var shadowMethodJavadoc = classJavadoc.findMethod(signature);
@@ -179,7 +233,9 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
         var anchorDiv = memberDiv.previousElementSibling;
         var newDiv = this.html('<div class="robolectric method"/>');
         memberDiv.parentElement.insertBefore(newDiv, memberDiv.nextSibling);
-        var docHtml = shadowMethodJavadoc.processTags(shadowMethodJavadoc.documentation);
+        // var docHtml = shadowMethodJavadoc.processTags(shadowMethodJavadoc.documentation);
+        var docHtml = this.markdownToHtml(shadowMethodJavadoc.body());
+        console.log('docHtml', docHtml);
         newDiv.innerHTML = "<p><b><i>Robolectric notes:</i></b></p>\n" + docHtml;
       }
     }
@@ -205,15 +261,16 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
                     methodJavadoc.name
                 ),
                 '(',
-                this.domClassNames(methodJavadoc.paramTypes),
+                this.domClassNames(methodJavadoc.paramTypes, methodJavadoc.params),
                 ')'
             )
         )
     );
 
     if (methodJavadoc.documentation) {
-      var firstParagraph = methodJavadoc.documentation.split(/\n\n/)[0]; // first paragraph
-      var p = domNode('p', {}, firstParagraph);
+      var firstParagraph = this.markdownToHtml(methodJavadoc.summary());
+      var p = domNode('p');
+      p.innerHTML = firstParagraph;
       td2.appendChild(p);
     }
 
@@ -221,7 +278,11 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
   }.bind(this));
 };
 
-RoboPage.prototype.domClassNames = function(className) {
+RoboPage.prototype.markdownToHtml = function(mdText) {
+  return this.converter_.makeHtml(mdText);
+};
+
+RoboPage.prototype.domClassNames = function(className, paramNames) {
   var descs = this.prettyClassNames(className);
   var dom = document.createElement('span');
   for (var i = 0; i < descs.length; i++) {
@@ -229,6 +290,9 @@ RoboPage.prototype.domClassNames = function(className) {
 
     var desc = descs[i];
     this.domClassNameRecursive_(desc, dom);
+    if (paramNames) {
+      dom.appendChild(document.createTextNode(' ' + paramNames[i]));
+    }
   }
   return dom;
 };

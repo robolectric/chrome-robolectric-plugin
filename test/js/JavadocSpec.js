@@ -15,14 +15,15 @@ describe("Javadoc", function() {
     });
 
     it("returns summary paragraph", function() {
-      expect(methodJavadoc.summary()).toEqual('Returns the content observers registered with the given <a href="/reference/android/net/Uri.html">Uri</a>.');
+      expect(methodJavadoc.summary())
+          .toEqual('Returns the content observers registered with the given [Uri](/reference/android/net/Uri.html "android.net.Uri").');
     });
 
-    it("returns all paragraphs", function() {
-      expect(methodJavadoc.paragraphs()).toEqual([
-        'Returns the content observers registered with the given <a href="/reference/android/net/Uri.html">Uri</a>.',
-        'Will be empty if no observer is registered.'
-      ]);
+    it("returns the body", function() {
+      expect(methodJavadoc.body())
+          .toEqual("Returns the content observers registered with the given [Uri](/reference/android/net/Uri.html \"android.net.Uri\").\n\n" +
+              "Will be empty if no observer is registered.\n"
+          );
     });
 
     it("returns all tags", function() {
@@ -32,6 +33,40 @@ describe("Javadoc", function() {
       ]);
     });
 
+    describe("processTags", function() {
+      it("converts {@code}", function() {
+        expect(methodJavadoc.processTags("Code goes {@code here}."))
+            .toEqual("Code goes `here`.")
+      });
+
+      it("converts {@link}", function() {
+        expect(methodJavadoc.processTags("Links like {@link java.lang.String}."))
+            .toEqual("Links like [String](/reference/java/lang/String.html \"java.lang.String\").");
+
+        expect(methodJavadoc.processTags("Links like {@link java.lang.String#toEqual(java.lang.Object)}."))
+            .toEqual("Links like [toEqual(Object)](/reference/java/lang/String.html#toEqual(java.lang.Object) \"java.lang.String#toEqual(java.lang.Object)\").");
+
+        expect(methodJavadoc.processTags("Links like {@link java.lang.String#toEqual(java.lang.Object) but display this}."))
+            .toEqual("Links like [but display this](/reference/java/lang/String.html#toEqual(java.lang.Object) \"java.lang.String#toEqual(java.lang.Object)\").");
+
+        expect(methodJavadoc.processTags("Links like {@link String#toEqual(java.lang.Object)}."))
+            .toEqual("Links like [toEqual(Object)](/reference/java/lang/String.html#toEqual(java.lang.Object) \"java.lang.String#toEqual(java.lang.Object)\").");
+
+        expect(methodJavadoc.processTags("Links like {@link String#toEqual(Object)}."))
+            .toEqual("Links like [toEqual(Object)](/reference/java/lang/String.html#toEqual(java.lang.Object) \"java.lang.String#toEqual(java.lang.Object)\").");
+
+        expect(methodJavadoc.processTags("Links like {@link #toEqual(java.lang.Object)}."))
+            .toEqual("Links like [toEqual(Object)](#toEqual(java.lang.Object) \"toEqual(java.lang.Object)\").");
+
+        expect(methodJavadoc.processTags("Links like {@link #toEqual(java.lang.Object) but display this}."))
+            .toEqual("Links like [but display this](#toEqual(java.lang.Object) \"toEqual(java.lang.Object)\").");
+
+        expect(methodJavadoc.processTags("Links like {@link java.lang.String but display this}."))
+            .toEqual("Links like [but display this](/reference/java/lang/String.html \"java.lang.String\").");
+
+      });
+    });
+
     describe("urlFor", function() {
       it("resolves class names against imports", function() {
         var javadoc = new Javadoc();
@@ -39,13 +74,19 @@ describe("Javadoc", function() {
         javadoc.imports['ContentProvider'] = 'android.content.ContentProvider';
         javadoc.imports['Uri'] = 'android.net.Uri';
 
-        expect(javadoc.urlFor('String'))
+        expect(javadoc.urlFor(javadoc.expandClass('String')))
             .toEqual('/reference/java/lang/String.html');
+
+        expect(javadoc.urlFor(javadoc.expandClass('String'), 'toString()'))
+            .toEqual('/reference/java/lang/String.html#toString()');
+
+        expect(javadoc.urlFor(null, 'toString()'))
+            .toEqual('#toString()');
 
         expect(javadoc.urlFor('java.lang.String'))
             .toEqual('/reference/java/lang/String.html');
 
-        expect(javadoc.urlFor('Robolectric'))
+        expect(javadoc.urlFor(javadoc.expandClass('Robolectric')))
             .toEqual('http://robolectric.org/javadoc/latest/org/robolectric/Robolectric.html');
 
         expect(javadoc.urlFor('org.robolectric.Robolectric'))
@@ -54,10 +95,10 @@ describe("Javadoc", function() {
         expect(javadoc.urlFor('any.other.Robolectric'))
             .toEqual('/reference/any/other/Robolectric.html');
 
-        expect(javadoc.urlFor('List'))
+        expect(javadoc.urlFor(javadoc.expandClass('List')))
             .toEqual('/reference/List.html');
 
-        expect(javadoc.urlFor('ContentProvider#delete(Uri, String, String[])'))
+        expect(javadoc.urlFor(javadoc.expandClass('ContentProvider'), javadoc.expandMethodSignature('delete(Uri, String, String[])')))
             .toEqual('/reference/android/content/ContentProvider.html#delete(android.net.Uri, java.lang.String, java.lang.String[])');
       });
     });

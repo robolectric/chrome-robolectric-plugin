@@ -22,40 +22,49 @@ function Javadoc() {
     'System': 'java.lang.System',
     'Thread': 'java.lang.Thread',
     'Throwable': 'java.lang.Throwable',
-    'Void': 'java.lang.Void',
+    'Void': 'java.lang.Void'
   };
 }
 
-Javadoc.prototype.urlFor = function(signature) {
-  var parts = signature.match(/^([^#]*)(#.*)?$/);
-  var className = parts[1];
-  var methodPart = parts[2] || '';
+Javadoc.prototype.urlFor = function(className, methodSignature) {
+  methodSignature = methodSignature ? '#' + methodSignature : '';
 
-  var imported = this.imports[className];
-  if (imported) {
-    className = imported;
+  if (!className) {
+    return methodSignature;
   }
 
-  if (methodPart) {
+  if (className.match(/^org\.robolectric\./)) {
+    return 'http://robolectric.org/javadoc/latest/' + className.replace(/\./g, '/') + '.html' + methodSignature;
+  } else {
+    return '/reference/' + className.replace(/\./g, '/') + '.html' + methodSignature;
+  }
+};
+
+Javadoc.prototype.expandClass = function(className) {
+  if (className && this.imports.hasOwnProperty(className)) {
+    return this.imports[className];
+  } else {
+    return className;
+  }
+};
+
+Javadoc.prototype.expandMethodSignature = function(signature) {
+  if (signature) {
     var buf = '';
     var soFar = '';
-    for (var i = 0; i < methodPart.length; i++) {
-      var c = methodPart.charAt(i);
-      if (c.match(/[ ,\[\]\<\>\(\)]/)) {
-        buf += this.imports[soFar] || soFar;
+    for (var i = 0; i < signature.length; i++) {
+      var c = signature.charAt(i);
+      if (c.match(/[ ,\[\]<>()]/)) {
+        buf += this.expandClass(soFar);
         soFar = '';
         buf += c;
       } else {
         soFar += c;
       }
     }
-    methodPart = buf;
-  }
-
-  if (className.match(/^org\.robolectric\./)) {
-    return 'http://robolectric.org/javadoc/latest/' + className.replace(/\./g, '/') + '.html' + methodPart;
+    return buf;
   } else {
-    return '/reference/' + className.replace(/\./g, '/') + '.html' + methodPart;
+    return signature;
   }
 };
 
@@ -65,10 +74,32 @@ Javadoc.prototype.processTags = function(text) {
   return text.replace(/\{(@[^\s]+)\s+([^}]+)\}/g, function(full, tag, str) {
     switch (tag) {
       case '@code':
-        return domNode('span', {}, domNode('code', {}, str)).innerHTML;
+        return '`'+ str + '`';
       case '@link':
-        var parts = str.split(/\./);
-        return domNode('span', {}, domNode('a', {'href': this.urlFor(str)}, parts[parts.length - 1])).innerHTML;
+      case '@linkplain':
+        var reParts = str.match(/^([^# ]+)?(#([^()]+\([^)]*\)))?(\s+.*)?/);
+        var classPart = this.expandClass(reParts[1]) || '';
+        var methodPart = this.expandMethodSignature(reParts[3]) || '';
+        var methodDisplay = reParts[3];
+
+        var displayString;
+        if (reParts[4]) {
+          displayString = reParts[4].trim();
+        } else {
+          displayString = methodDisplay || classPart;
+          displayString = displayString.replace(/[A-Za-z0-9_$.]+\.([A-Za-z0-9_$]+)/, '$1');
+        }
+        var longDisplayString = classPart;
+        if (methodPart) {
+          if (longDisplayString) longDisplayString += '#';
+          longDisplayString += methodPart;
+        }
+        console.log(str);
+        var url = this.urlFor(classPart, methodPart);
+
+        console.log(str, '\nclass', classPart, 'method', methodPart, 'display', displayString, 'url', url);
+        // return domNode('span', {}, domNode('a', {'href': this.urlFor(str)}, parts[parts.length - 1])).innerHTML;
+        return '[' + displayString + '](' + url + ' "' + longDisplayString + '")';
       default:
         return full;
     }
@@ -112,6 +143,8 @@ function MethodJavadoc(signature, json, classJavadoc) {
   this.name = match[1];
   this.paramTypes = match[2];
 
+  this.paramNames = json.params;
+
   this.documentation = json.documentation;
 
   this.imports = classJavadoc.imports;
@@ -125,7 +158,8 @@ MethodJavadoc.prototype.process_ = function() {
   }
 
   if (!this.documentation) {
-    this.paragraphs_ = [];
+    this.summary_ = '';
+    this.body_ = '';
     this.tags_ = [];
   } else {
     var firstTag = this.documentation.indexOf("\n@");
@@ -143,7 +177,9 @@ MethodJavadoc.prototype.process_ = function() {
     } else {
       narrative = this.documentation;
     }
-    this.paragraphs_ = narrative.split(/\n\n/);
+    var paragraphs = narrative.split(/\n\n/);
+    this.summary_ = this.processTags(paragraphs[0]);
+    this.body_ = this.processTags(paragraphs.join("\n\n"));
     this.tags_ = tags;
   }
 
@@ -152,14 +188,12 @@ MethodJavadoc.prototype.process_ = function() {
 
 MethodJavadoc.prototype.summary = function() {
   this.process_();
-  return this.processTags(this.paragraphs_[0]);
+  return this.summary_;
 };
 
-MethodJavadoc.prototype.paragraphs = function() {
+MethodJavadoc.prototype.body = function() {
   this.process_();
-  return this.paragraphs_.map(function(para) {
-    return this.processTags(para.trim());
-  }.bind(this));
+  return this.body_;
 };
 
 MethodJavadoc.prototype.tags = function() {

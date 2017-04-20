@@ -87,6 +87,11 @@ describe("RoboPage", function() {
       expect(dom.innerText).toEqual("List<Map<String, Integer>>, int");
     });
 
+    it("should insert param names if given", function() {
+      var dom = roboPage.domClassNames('java.util.List<java.util.Map<java.lang.String,java.lang.Integer>>, int', ['things', 'count']);
+      expect(dom.innerText).toEqual("List<Map<String, Integer>> things, int count");
+    });
+
     it("should have correct links", function() {
       var dom = roboPage.domClassNames('java.util.List<java.util.Map<java.lang.String,java.lang.Integer>>, int');
       expect(dom.innerHTML).toEqual('<a href="/reference/java/util/List.html">List</a>&lt;<a href="/reference/java/util/Map.html">Map</a>&lt;<a href="/reference/java/lang/String.html">String</a>, <a href="/reference/java/lang/Integer.html">Integer</a>&gt;&gt;, int');
