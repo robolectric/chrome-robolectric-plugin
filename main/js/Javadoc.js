@@ -94,11 +94,7 @@ Javadoc.prototype.processTags = function(text) {
           if (longDisplayString) longDisplayString += '#';
           longDisplayString += methodPart;
         }
-        console.log(str);
         var url = this.urlFor(classPart, methodPart);
-
-        console.log(str, '\nclass', classPart, 'method', methodPart, 'display', displayString, 'url', url);
-        // return domNode('span', {}, domNode('a', {'href': this.urlFor(str)}, parts[parts.length - 1])).innerHTML;
         return '[' + displayString + '](' + url + ' "' + longDisplayString + '")';
       default:
         return full;
@@ -123,7 +119,6 @@ function ClassJavadoc(json) {
   this.json['imports'].reverse().forEach(function(className) {
     this.imports[className.match(/([^.]+)$/)[1]] = className;
   }.bind(this));
-  console.log('IMPORTS', this.imports);
 }
 
 ClassJavadoc.prototype = Object.create(Javadoc.prototype);
@@ -182,7 +177,6 @@ MethodJavadoc.prototype.process_ = function() {
       tagLines.split(/\n@/).forEach(function(tagLine) {
         if (tagLine.trim() == '') return;
         tags.push('@' + tagLine.trim());
-        console.log(tagLine);
       });
     } else {
       narrative = this.documentation;

@@ -125,7 +125,6 @@ RoboPage.prototype.extractSignature = function(html) {
 };
 
 RoboPage.prototype.insertShadowMethod = function(methodJavadoc, insertionPoint) {
-  console.log('insertShadowMethod', methodJavadoc.name, insertionPoint);
   var anchor = domNode('a', {'name': 'shadow:' + methodJavadoc.signature});
   insertionPoint.parentNode.insertBefore(anchor, insertionPoint);
 
@@ -150,7 +149,6 @@ RoboPage.prototype.insertShadowMethod = function(methodJavadoc, insertionPoint) 
   p.innerHTML = this.markdownToHtml(methodJavadoc.body());
   methodDiv.appendChild(p);
 
-  console.log('tags', methodJavadoc.tags());
   var deprecatedRows = [];
   var paramRows = [];
   var returnRows = [];
@@ -225,16 +223,12 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
   });
   var shadowMethodIndex = 0;
 
-  console.log('allShadowMethods starts with', allShadowMethods[0].name);
-
   // insert shadow methods and add notes to @Implemented methods...
   document.querySelectorAll('div.api pre.api-signature').forEach(function(node) {
     var html = node.innerHTML;
     var signature = this.extractSignature(html);
 
     if (signature) {
-      console.log('inspecting', signature, node, 'first shadow method to consider is', (allShadowMethods[shadowMethodIndex] || {}).name);
-
       var insertionPoint = node.parentElement.previousElementSibling;
 
       for (var i = shadowMethodIndex; i < allShadowMethods.length; i++) {
@@ -250,22 +244,19 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
       var shadowMethodJavadoc = classJavadoc.findMethod(signature);
       if (shadowMethodJavadoc && shadowMethodJavadoc.documentation) {
         shadowMethodIndex = allShadowMethods.indexOf(shadowMethodJavadoc) + 1;
-        console.log(signature, 'at', shadowMethodIndex);
 
         var memberDiv = node.parentElement;
         var anchorDiv = memberDiv.previousElementSibling;
         var newDiv = this.html('<div class="robolectric method"/>');
         memberDiv.parentElement.insertBefore(newDiv, memberDiv.nextSibling);
-        // var docHtml = shadowMethodJavadoc.processTags(shadowMethodJavadoc.documentation);
         var docHtml = this.markdownToHtml(shadowMethodJavadoc.body());
-        console.log('docHtml', docHtml);
         newDiv.innerHTML = "<p><b><i>Robolectric notes:</i></b></p>\n" + docHtml;
       }
     }
   }.bind(this));
 
   var pubMethodsTable = document.getElementById('pubmethods');
-  var shadowMethodsTable = this.html('<table class="responsive methods robolectric-shadow"><tbody><tr><th colspan="2"><h3>Shadow methods</h3></th></tr></tbody></table>');
+  var shadowMethodsTable = this.html('<table class="responsive methods robolectric-shadow"><tbody><tr><th colspan="2"><h3>Shadowed methods</h3></th></tr></tbody></table>');
   pubMethodsTable.parentNode.insertBefore(shadowMethodsTable, pubMethodsTable.nextElementSibling);
   allShadowMethods.forEach(function(methodJavadoc) {
     if (methodJavadoc.isImplementation) return;

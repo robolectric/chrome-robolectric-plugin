@@ -1,5 +1,3 @@
-console.log('start content-script!');
-
 var roboPage = new RoboPage();
 roboPage.init();
 
@@ -14,6 +12,3 @@ document.addEventListener("DOMContentLoaded", function(event) {
     console.log("ready response", response);
   });
 });
-
-
-console.log("done!");
