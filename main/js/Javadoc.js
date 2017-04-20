@@ -144,6 +144,16 @@ function MethodJavadoc(signature, json, classJavadoc) {
   this.paramTypes = match[2];
 
   this.paramNames = json.params;
+  this.modifiers = [];
+  this.isPublic = false;
+  for (var i = 0; i < json.modifiers.length; i++) {
+    var modifier = json.modifiers[i];
+    if (modifier == 'public') {
+      this.isPublic = true;
+    } else {
+      this.modifiers.push(modifier);
+    }
+  }
 
   this.documentation = json.documentation;
 

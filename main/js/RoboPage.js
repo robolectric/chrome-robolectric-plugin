@@ -8,6 +8,8 @@ function RoboPage() {
   this._ctsResults = {};
 
   this.androidClassName = null;
+  this.androidShortName = null;
+  this.androidVarName = null;
 
   this.converter_ = new showdown.Converter();
 }
@@ -73,7 +75,10 @@ RoboPage.prototype.init = function() {
   this.getCtsResults(this.gotCtsResults.bind(this));
 
   if (document.location.pathname.startsWith('/reference/')) {
-    this.androidClassName = document.location.pathname.split('/').slice(2).join('.').replace('.html', '');
+    var classNameParts = document.location.pathname.replace(/\.html$/, '').split('/').slice(2);
+    this.androidClassName = classNameParts.join('.');
+    this.androidShortName = classNameParts.pop();
+    this.androidVarName = this.androidShortName.charAt(0).toLocaleLowerCase() + this.androidShortName.substring(1);
     console.log('android class name:', this.androidClassName);
   }
 
@@ -125,7 +130,9 @@ RoboPage.prototype.insertShadowMethod = function(methodJavadoc, insertionPoint) 
   insertionPoint.parentNode.insertBefore(anchor, insertionPoint);
 
   var methodDiv = domNode('div', {'class': 'api apilevel-0'},
-      domNode('h3', {'class': 'api-name'}, 'shadowOf().', methodJavadoc.name),
+      domNode('h3', {'class': 'api-name'},
+          domNode('span', {'class': 'robolectric-shadow-of'}, 'shadowOf(' + this.androidVarName + ').'),
+          methodJavadoc.name),
       domNode('div', {'class': 'api-level'},
           domNode('div', {}, 'Robolectric shadow method')
       ),
@@ -144,6 +151,10 @@ RoboPage.prototype.insertShadowMethod = function(methodJavadoc, insertionPoint) 
   methodDiv.appendChild(p);
 
   console.log('tags', methodJavadoc.tags());
+  var deprecatedRows = [];
+  var paramRows = [];
+  var returnRows = [];
+
   methodJavadoc.tags().forEach(function(tag) {
     var match = tag.match(/@(\w+)\s+(.*)/);
     var tagName = match[1];
@@ -153,53 +164,65 @@ RoboPage.prototype.insertShadowMethod = function(methodJavadoc, insertionPoint) 
 
     switch (tagName) {
       case 'deprecated':
-        tableHeader = 'Deprecated';
-        tableRows.push(['', this.html(this.markdownToHtml(methodJavadoc.processTags(rest)))]);
+        deprecatedRows.push(['', this.html(this.markdownToHtml(methodJavadoc.processTags(rest)))]);
         break;
       case 'param':
         tableHeader = 'Parameters';
         var paramParts = rest.split(/ /);
         var paramName = paramParts.shift();
         var paramDesc = paramParts.join(' ');
-        tableRows.push([domNode('code', {}, paramName), this.html(this.markdownToHtml(methodJavadoc.processTags(paramDesc)))]);
+        paramRows.push([domNode('code', {}, paramName), this.html(this.markdownToHtml(methodJavadoc.processTags(paramDesc)))]);
         break;
       case 'return':
         tableHeader = 'Returns';
-        tableRows.push([this.domClassNames(methodJavadoc.returnType), this.html(this.markdownToHtml(methodJavadoc.processTags(rest)))]);
+        returnRows.push([this.domClassNames(methodJavadoc.returnType), this.html(this.markdownToHtml(methodJavadoc.processTags(rest)))]);
         break;
-    }
-
-    if (tableRows.length > 0) {
-      var tbody;
-      var table = domNode('table', {'class': 'responsive'},
-          tbody = domNode('tbody', {},
-              domNode('tr', {},
-                  domNode('th', {'colspan': '2'}, tableHeader)
-              )
-          )
-      );
-
-      tableRows.forEach(function(row) {
-        tbody.appendChild(
-            domNode('tr', {},
-                domNode('td', {}, row[0]),
-                domNode('td', {'width': '100%'}, row[1])
-            )
-        );
-      }.bind(this));
-      methodDiv.appendChild(table);
-    } else {
-      var p = domNode('p', {}, tag);
-      methodDiv.appendChild(p);
+      default:
+        var p = domNode('p', {}, tag);
+        methodDiv.appendChild(p);
+        break;
     }
   }.bind(this));
 
+  if (deprecatedRows.length > 0) {
+    methodDiv.appendChild(this.table(domNode('th', {'colspan': '2'}, 'Deprecated'), deprecatedRows));
+  }
+
+  if (paramRows.length > 0) {
+    methodDiv.appendChild(this.table(domNode('th', {'colspan': '2'}, 'Parameters'), paramRows));
+  }
+
+  if (returnRows.length > 0) {
+    methodDiv.appendChild(this.table(domNode('th', {'colspan': '2'}, 'Returns'), returnRows));
+  }
+
   insertionPoint.parentNode.insertBefore(methodDiv, insertionPoint);
-  return {anchor: anchor, methodDiv: methodDiv, p: p};
+};
+
+RoboPage.prototype.table = function(headers, rows) {
+  var tbody;
+  var table = domNode('table', {'class': 'responsive'},
+      tbody = domNode('tbody', {},
+          domNode('tr', {}, headers)
+      )
+  );
+
+  rows.forEach(function(row) {
+    tbody.appendChild(
+        domNode('tr', {},
+            domNode('td', {}, row[0]),
+            domNode('td', {'width': '100%'}, row[1])
+        )
+    );
+  }.bind(this));
+  return table;
+
 };
 
 RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
-  var allShadowMethods = classJavadoc.methods;
+  var allShadowMethods = classJavadoc.methods.filter(function(methodJavadoc) {
+    return !methodJavadoc.isImplementation && methodJavadoc.isPublic;
+  });
   var shadowMethodIndex = 0;
 
   console.log('allShadowMethods starts with', allShadowMethods[0].name);
@@ -246,17 +269,19 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
   pubMethodsTable.parentNode.insertBefore(shadowMethodsTable, pubMethodsTable.nextElementSibling);
   allShadowMethods.forEach(function(methodJavadoc) {
     if (methodJavadoc.isImplementation) return;
+    if (!methodJavadoc.isPublic) return;
 
     var td2;
     var row = domNode('tr', {'class': 'api apilevel-0 shadow'},
         domNode('td', {},
             domNode('code', {},
+                methodJavadoc.modifiers.length > 0 ? methodJavadoc.modifiers.join(' ') + ' ' : '',
                 this.domClassNames(methodJavadoc.returnType)
             )
         ),
         td2 = domNode('td', {'width': '100%'},
             domNode('code', {},
-                'shadowOf().',
+                domNode('span', {'class': 'robolectric-shadow-of'}, 'shadowOf(' + this.androidVarName + ').'),
                 domNode('a', {'href': '#shadow:' + methodJavadoc.signature},
                     methodJavadoc.name
                 ),
@@ -380,7 +405,7 @@ RoboPage.prototype.prettyClassNames = function(classNames) {
 RoboPage.prototype.findCtsResults = function(name) {
   var r = this._ctsResults[name];
   if (r == null) {
-    r = this._ctsResults[name] = {pass: 0, fail: 0};
+    r = this._ctsResults[name] = {pass: [], fail: []};
   }
   return r;
 };
@@ -401,17 +426,17 @@ RoboPage.prototype.gotCtsResults = function(json) {
       Object.keys(methods).forEach(function(ctsMethodName) {
         switch (methods[ctsMethodName]) {
           case 'PASS':
-            ctsAllResults.pass++;
-            ctsPackageResults.pass++;
-            ctsClassResults.pass++;
+            ctsAllResults.pass.push(ctsMethodName);
+            ctsPackageResults.pass.push(ctsMethodName);
+            ctsClassResults.pass.push(ctsMethodName);
             break;
           case 'FAIL':
           case 'TIMEOUT':
           case 'DISABLE':
           default:
-            ctsAllResults.fail++;
-            ctsPackageResults.fail++;
-            ctsClassResults.fail++;
+            ctsAllResults.fail.push(ctsMethodName);
+            ctsPackageResults.fail.push(ctsMethodName);
+            ctsClassResults.fail.push(ctsMethodName);
             break;
         }
       });
@@ -421,13 +446,13 @@ RoboPage.prototype.gotCtsResults = function(json) {
   this.whenReady(function() {
     var results = this._ctsResults[this.androidClassName];
     if (results) {
-      var total = results.pass + results.fail;
-      this.roboPanel.appendChild(this.html('<div>CTS: ' + results.pass + '/' + total + "</div>"));
+      var total = results.pass.length + results.fail.length;
+      this.roboPanel.appendChild(this.html('<div>CTS: ' + results.pass.length + '/' + total + "</div>"));
     }
 
     results = this._ctsResults['all'];
     if (results) {
-      total = results.pass + results.fail;
+      total = results.pass.length + results.fail.length;
       this.roboPanel.appendChild(this.html('<div>All CTS: ' + results.pass + '/' + total + "</div>"));
     }
 
@@ -436,8 +461,29 @@ RoboPage.prototype.gotCtsResults = function(json) {
       var text = anchor.innerText.trim();
       var results = this._ctsResults[text];
       if (results) {
-        var total = results.pass + results.fail;
-        anchor.parentNode.insertBefore(this.html('<div class="cts-results">' + results.pass + '/' + total + '</div>'), anchor.parentNode.firstChild);
+        var total = results.pass.length + results.fail.length;
+        var ctsDiv = this.html('<div class="cts-results">' + results.pass.length + '/' + total + '</div>');
+        ctsDiv.addEventListener('click', function() {
+          var passUl, failUl;
+          var lightbox = domNode('div', {'class': 'cts-lightbox'},
+              domNode('h2', {}, 'CTS Results for ' + text),
+              domNode('h3', {}, 'Pass: ' + results.pass.length),
+              passUl = domNode('ul', {}),
+              domNode('h3', {}, 'Fail: ' + results.fail.length),
+              failUl = domNode('ul', {})
+          );
+          results.pass.forEach(function(m) {
+            passUl.appendChild(domNode('li', {}, m))
+          });
+          results.fail.forEach(function(m) {
+            failUl.appendChild(domNode('li', {}, m))
+          });
+          lightbox.addEventListener('click', function() {
+            document.body.removeChild(lightbox);
+          });
+          document.body.appendChild(lightbox);
+        });
+        anchor.parentNode.insertBefore(ctsDiv, anchor.parentNode.firstChild);
       }
     }.bind(this));
   }.bind(this));
