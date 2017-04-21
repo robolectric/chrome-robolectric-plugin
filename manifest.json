@@ -3,7 +3,7 @@
 
   "name": "Robolectric",
   "description": "Adds Robolectric documentation to the Android developer docs.",
-  "version": "0.1.420",
+  "version": "0.2017.4210",
   "icons": {
     "16": "main/images/robolectric-icon.png",
     "48": "main/images/robolectric-48.png",
