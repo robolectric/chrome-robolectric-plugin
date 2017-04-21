@@ -139,23 +139,17 @@ function MethodJavadoc(signature, json, classJavadoc) {
   this.paramTypes = match[2];
 
   this.paramNames = json.params;
-  this.modifiers = [];
-  this.isPublic = false;
-  for (var i = 0; i < json.modifiers.length; i++) {
-    var modifier = json.modifiers[i];
-    if (modifier == 'public') {
-      this.isPublic = true;
-    } else {
-      this.modifiers.push(modifier);
-    }
-  }
-
+  this.modifiers = json.modifiers;
   this.documentation = json.documentation;
 
   this.imports = classJavadoc.imports;
 }
 
 MethodJavadoc.prototype = Object.create(Javadoc.prototype);
+
+MethodJavadoc.prototype.isPublic = function() {
+  return this.modifiers.indexOf('public') > -1;
+};
 
 MethodJavadoc.prototype.process_ = function() {
   if (this.processed_) {
