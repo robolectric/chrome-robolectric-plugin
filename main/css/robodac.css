@@ -1,8 +1,3 @@
-.robolectric {
-    border: 3px solid #7FC06B;
-    padding: 1em;
-}
-
 .cts-results {
     float: right;
     font-size: 0.6em;
@@ -28,6 +23,17 @@
 .cts-lightbox li {
     font-family: Monaco, "Lucida Console", monospace;
     margin: 0;
+}
+
+div.robolectric-shadow-api, div.robolectric-method-extra, div.robolectric-class-extra {
+    position: relative;
+}
+
+div.robolectric-shadow-api img.robolectric-logo,
+div.robolectric-class-extra img.robolectric-logo,
+div.robolectric-method-extra img.robolectric-logo {
+    position: absolute;
+    left: -44px;
 }
 
 span.robolectric-shadow-of {

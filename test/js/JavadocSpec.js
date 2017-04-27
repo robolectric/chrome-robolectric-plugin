@@ -1,12 +1,12 @@
 describe("Javadoc", function() {
-  describe('with a typical method', function() {
-    var methodJavadoc;
+  var methodJavadoc;
 
+  describe('with a typical method', function() {
     beforeEach(function() {
       methodJavadoc = new MethodJavadoc('getContentObservers(android.net.Uri)', {
         "isImplementation": false,
         "modifiers": ["public", "synchronized"],
-        "documentation": "Returns the content observers registered with the given {@link android.net.Uri}.\n\nWill be empty if no observer is registered.\n\n@param uri Given URI\n@return The content observers, or null.",
+        "documentation": "Returns the content observers registered with the given {@link android.net.Uri}.\n\nWill be empty if no observer is registered.\nLinks can span {@link android.media.MediaPlayer.OnCompletionListener\nOnCompletionListener} multiple lines.\n\n@param uri\n     Given URI\n     possibly on multiple lines.\n@return The content observers, or null.",
         "params": ["uri"],
         "returnType": "java.util.Collection\u003candroid.database.ContentObserver\u003e",
         "exceptions": [],
@@ -22,13 +22,14 @@ describe("Javadoc", function() {
     it("returns the body", function() {
       expect(methodJavadoc.body())
           .toEqual("Returns the content observers registered with the given [Uri](/reference/android/net/Uri.html \"android.net.Uri\").\n\n" +
-              "Will be empty if no observer is registered.\n"
+              "Will be empty if no observer is registered.\n" +
+              "Links can span [OnCompletionListener](/reference/android/media/MediaPlayer/OnCompletionListener.html \"android.media.MediaPlayer.OnCompletionListener\") multiple lines.\n"
           );
     });
 
     it("returns all tags", function() {
       expect(methodJavadoc.tags()).toEqual([
-        '@param uri Given URI',
+        '@param uri Given URI possibly on multiple lines.',
         '@return The content observers, or null.'
       ]);
     });
@@ -102,11 +103,37 @@ describe("Javadoc", function() {
             .toEqual('/reference/android/content/ContentProvider.html#delete(android.net.Uri, java.lang.String, java.lang.String[])');
       });
     });
+  });
 
-    describe("processTags", function() {
-      it("", function() {
-
-      });
+  describe('@link processing', function() {
+    beforeEach(function() {
+      methodJavadoc = new MethodJavadoc('getContentObservers(android.net.Uri)', {
+        "documentation": "calling {@link #setDataSource} using"
+      }, new Javadoc());
     });
-  })
+
+    it("returns the body", function() {
+      expect(methodJavadoc.body())
+          .toEqual('calling [setDataSource](#setDataSource() "setDataSource()") using');
+    });
+  });
+
+  describe('#expandMethodSignature', function() {
+    it("adds params if needed", function() {
+      var classJavadoc = new ClassJavadoc({
+        methods: [],
+        imports: ['android.media.MediaPlayer']
+      });
+      expect(classJavadoc.expandMethodSignature('setDataSource(String)'))
+          .toEqual('setDataSource(java.lang.String)');
+      expect(classJavadoc.expandMethodSignature('setDataSource'))
+          .toEqual('setDataSource()');
+      expect(classJavadoc.expandMethodSignature('setDataSource()'))
+          .toEqual('setDataSource()');
+
+      expect(classJavadoc.expandMethodSignature('MediaPlayer#setDataSource(String)'))
+          .toEqual('android.media.MediaPlayer#setDataSource(java.lang.String)');
+
+    });
+  });
 });

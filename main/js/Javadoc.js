@@ -54,7 +54,7 @@ Javadoc.prototype.expandMethodSignature = function(signature) {
     var soFar = '';
     for (var i = 0; i < signature.length; i++) {
       var c = signature.charAt(i);
-      if (c.match(/[ ,\[\]<>()]/)) {
+      if (c.match(/[ ,\[\]<>()#]/)) {
         buf += this.expandClass(soFar);
         soFar = '';
         buf += c;
@@ -62,6 +62,11 @@ Javadoc.prototype.expandMethodSignature = function(signature) {
         soFar += c;
       }
     }
+
+    if (soFar) {
+      buf += soFar + '()';
+    }
+
     return buf;
   } else {
     return signature;
@@ -72,19 +77,21 @@ Javadoc.prototype.processTags = function(text) {
   if (text == null) return '';
 
   return text.replace(/\{(@[^\s]+)\s+([^}]+)\}/g, function(full, tag, str) {
+    str = str.replace(/\n/g, ' ');
     switch (tag) {
       case '@code':
         return '`'+ str + '`';
       case '@link':
       case '@linkplain':
-        var reParts = str.match(/^([^# ]+)?(#([^()]+\([^)]*\)))?(\s+.*)?/);
+        var reParts = str.match(/^([^# ]+)?(?:#([^() ]+(?:\([^)]*\))?))?(\s+.*)?/);
+        //                        1-    -1     2-                   -2  3-   -3
         var classPart = this.expandClass(reParts[1]) || '';
-        var methodPart = this.expandMethodSignature(reParts[3]) || '';
-        var methodDisplay = reParts[3];
+        var methodPart = this.expandMethodSignature(reParts[2]) || '';
+        var methodDisplay = reParts[2];
 
         var displayString;
-        if (reParts[4]) {
-          displayString = reParts[4].trim();
+        if (reParts[3]) {
+          displayString = reParts[3].trim();
         } else {
           displayString = methodDisplay || classPart;
           displayString = displayString.replace(/[A-Za-z0-9_$.]+\.([A-Za-z0-9_$]+)/, '$1');
@@ -106,6 +113,7 @@ function ClassJavadoc(json) {
   Javadoc.apply(this);
 
   this.json = json;
+  this.documentation = json.documentation;
   this.methods_ = {};
   this.methods = [];
 
@@ -169,8 +177,9 @@ MethodJavadoc.prototype.process_ = function() {
 
       var tagLines = this.documentation.substring(firstTag);
       tagLines.split(/\n@/).forEach(function(tagLine) {
-        if (tagLine.trim() == '') return;
-        tags.push('@' + tagLine.trim());
+        tagLine = tagLine.replace(/\n\s+/g, ' ').trim();
+        if (tagLine == '') return;
+        tags.push('@' + tagLine);
       });
     } else {
       narrative = this.documentation;

@@ -102,4 +102,11 @@ describe("RoboPage", function() {
       expect(dom.innerHTML).toEqual('<a href="/reference/java/util/List.html">List</a>&lt;<a href="http://robolectric.org/javadoc/latest/org/robolectric/shadows/ShadowContentResolver.html">ShadowContentResolver</a>&gt;');
     });
   });
+
+  describe('markdown', function() {
+    it('should linkify properly', function() {
+      expect(new RoboPage().markdownToHtml('Full support of the [MediaPlayer](/reference/android/media/MediaPlayer.html "android.media.MediaPlayer") internal states'))
+          .toEqual('<p>Full support of the <a href="/reference/android/media/MediaPlayer.html" title="android.media.MediaPlayer">MediaPlayer</a> internal states</p>');
+    });
+  });
 });
