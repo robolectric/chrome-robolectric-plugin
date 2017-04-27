@@ -7,6 +7,17 @@
     line-height: 1em;
 }
 
+.cts-lightbox-bg {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    background: black;
+    opacity: .6;
+}
+
 .cts-lightbox {
     position: fixed;
     top: 2em;

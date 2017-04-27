@@ -1,6 +1,4 @@
 function RoboPage() {
-  this.roboHome = 'https://robolectric.github.io';
-
   this.isReady = false;
   this._onReadyCallbacks = [];
 
@@ -186,7 +184,7 @@ RoboPage.prototype.tagMdToAppendable = function(methodJavadoc, text) {
   }
 };
 
-RoboPage.prototype.tagTables = function(methodJavadoc, methodDiv) {
+RoboPage.prototype.tagTables = function(javadoc) {
   var deprecatedRows = [];
   var paramRows = [];
   var returnRows = [];
@@ -194,33 +192,33 @@ RoboPage.prototype.tagTables = function(methodJavadoc, methodDiv) {
   var authorRows = [];
   var extras = [];
 
-  methodJavadoc.tags().forEach(function(tag) {
+  javadoc.tags().forEach(function(tag) {
     var match = tag.match(/@(\w+)\s+(.*)/);
     var tagName = match[1];
     var rest = match[2];
 
     switch (tagName) {
       case 'deprecated':
-        deprecatedRows.push([this.tagMdToAppendable(methodJavadoc, rest)]);
+        deprecatedRows.push([this.tagMdToAppendable(javadoc, rest)]);
         break;
       case 'param':
         var tagParts = rest.split(/ /);
         var paramName = tagParts.shift();
         var paramDesc = tagParts.join(' ');
-        var html = this.tagMdToAppendable(methodJavadoc, paramDesc);
+        var html = this.tagMdToAppendable(javadoc, paramDesc);
         paramRows.push([domNode('code', {}, paramName), html]);
         break;
       case 'return':
-        returnRows.push([this.domClassNames(methodJavadoc.returnType), this.tagMdToAppendable(methodJavadoc, rest)]);
+        returnRows.push([this.domClassNames(javadoc.returnType), this.tagMdToAppendable(javadoc, rest)]);
         break;
       case 'throws':
         var tagParts = rest.split(/ /);
         var throwsType = tagParts.shift();
         var throwsDesc = tagParts.join(' ');
-        throwsRows.push([this.domClassNames(throwsType), this.tagMdToAppendable(methodJavadoc, throwsDesc)]);
+        throwsRows.push([this.domClassNames(throwsType), this.tagMdToAppendable(javadoc, throwsDesc)]);
         break;
       case 'author':
-        authorRows.push([this.tagMdToAppendable(methodJavadoc, rest)]);
+        authorRows.push([this.tagMdToAppendable(javadoc, rest)]);
         break;
       default:
         var p = domNode('p', {}, tagName + ': ' + rest);
@@ -332,20 +330,29 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
 
   // insert class-level shadow description...
   if (classJavadoc.documentation) {
-    var mdText = classJavadoc.processTags(classJavadoc.documentation);
-    console.log(mdText);
-    document.mdText = mdText;
-    var docs = domNode('div', {'class': 'robolectric-class-extra'},
-        domNode('img', {'src': 'https://s3.amazonaws.com/robolectric/images/robolectric-icon@2x.png', 'alt': '', 'class': 'robolectric-logo'}),
-        this.html(this.markdownToHtml(mdText)));
     var h2s = document.getElementsByTagName('h2');
+    insertionPoint = null;
     for (var i = 0; i < h2s.length; i++) {
       var h2 = h2s[i];
       if (h2.className == 'api-section' && h2.innerText == 'Summary') {
-        h2.parentNode.insertBefore(domNode('hr'), h2);
-        h2.parentNode.insertBefore(docs, h2);
-        h2.parentNode.insertBefore(domNode('hr'), h2);
+        insertionPoint = h2;
         break;
+      }
+    }
+
+    if (insertionPoint) {
+      var mdText = classJavadoc.processTags(classJavadoc.body());
+
+      var docs = domNode('div', {'class': 'robolectric-class-extra'},
+          domNode('img', {'src': 'https://s3.amazonaws.com/robolectric/images/robolectric-icon@2x.png', 'alt': '', 'class': 'robolectric-logo'}),
+          this.html(this.markdownToHtml(mdText)));
+
+      insertionPoint.parentNode.insertBefore(domNode('hr'), insertionPoint);
+      insertionPoint.parentNode.insertBefore(docs, insertionPoint);
+
+      var tagTables = this.tagTables(classJavadoc);
+      for (i = 0; i < tagTables.length; i++) {
+        insertionPoint.parentNode.insertBefore(tagTables[i], insertionPoint);
       }
     }
   }
@@ -378,7 +385,6 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
         while (lastChild.tagName == 'TABLE') {
           lastChild = lastChild.previousElementSibling;
         }
-        console.log('insert after ', lastChild);
 
         var anchorDiv = memberDiv.previousElementSibling;
         var docHtml = this.markdownToHtml('_Robolectric Notes:_ ' + implMethodJavadoc.body());
@@ -573,16 +579,21 @@ RoboPage.prototype.gotCtsResults = function(json) {
               domNode('h3', {}, 'Fail: ' + results.fail.length),
               failUl = domNode('ul', {})
           );
+          var lightboxBg = domNode('div', {'class': 'cts-lightbox-bg'});
           results.pass.forEach(function(m) {
             passUl.appendChild(domNode('li', {}, m))
           });
           results.fail.forEach(function(m) {
             failUl.appendChild(domNode('li', {}, m))
           });
-          lightbox.addEventListener('click', function() {
+          var close = function() {
             document.body.removeChild(lightbox);
-          });
+            document.body.removeChild(lightboxBg);
+          };
+          lightbox.addEventListener('click', close);
+          lightboxBg.addEventListener('click', close);
           document.body.appendChild(lightbox);
+          document.body.appendChild(lightboxBg);
         });
         anchor.parentNode.insertBefore(ctsDiv, anchor.parentNode.firstChild);
       }

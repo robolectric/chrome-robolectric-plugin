@@ -109,10 +109,64 @@ Javadoc.prototype.processTags = function(text) {
   }.bind(this));
 };
 
+Javadoc.prototype.isPublic = function() {
+  return this.modifiers.indexOf('public') > -1;
+};
+
+Javadoc.prototype.process_ = function() {
+  if (this.processed_) {
+    return;
+  }
+
+  if (!this.documentation) {
+    this.summary_ = '';
+    this.body_ = '';
+    this.tags_ = [];
+  } else {
+    var firstTag = this.documentation.indexOf("\n@");
+    var narrative;
+    var tags = [];
+    if (firstTag != -1) {
+      narrative = this.documentation.substring(0, firstTag);
+
+      var tagLines = this.documentation.substring(firstTag);
+      tagLines.split(/\n@/).forEach(function(tagLine) {
+        tagLine = tagLine.replace(/\n\s+/g, ' ').trim();
+        if (tagLine == '') return;
+        tags.push('@' + tagLine);
+      });
+    } else {
+      narrative = this.documentation;
+    }
+    var paragraphs = narrative.split(/\n\n/);
+    this.summary_ = this.processTags(paragraphs[0]);
+    this.body_ = this.processTags(paragraphs.join("\n\n"));
+    this.tags_ = tags;
+  }
+
+  this.processed_ = true;
+};
+
+Javadoc.prototype.summary = function() {
+  this.process_();
+  return this.summary_;
+};
+
+Javadoc.prototype.body = function() {
+  this.process_();
+  return this.body_;
+};
+
+Javadoc.prototype.tags = function() {
+  this.process_();
+  return this.tags_;
+};
+
 function ClassJavadoc(json) {
   Javadoc.apply(this);
 
   this.json = json;
+  this.modifiers = ['public'];
   this.documentation = json.documentation;
   this.methods_ = {};
   this.methods = [];
@@ -154,56 +208,3 @@ function MethodJavadoc(signature, json, classJavadoc) {
 }
 
 MethodJavadoc.prototype = Object.create(Javadoc.prototype);
-
-MethodJavadoc.prototype.isPublic = function() {
-  return this.modifiers.indexOf('public') > -1;
-};
-
-MethodJavadoc.prototype.process_ = function() {
-  if (this.processed_) {
-    return;
-  }
-
-  if (!this.documentation) {
-    this.summary_ = '';
-    this.body_ = '';
-    this.tags_ = [];
-  } else {
-    var firstTag = this.documentation.indexOf("\n@");
-    var narrative;
-    var tags = [];
-    if (firstTag != -1) {
-      narrative = this.documentation.substring(0, firstTag);
-
-      var tagLines = this.documentation.substring(firstTag);
-      tagLines.split(/\n@/).forEach(function(tagLine) {
-        tagLine = tagLine.replace(/\n\s+/g, ' ').trim();
-        if (tagLine == '') return;
-        tags.push('@' + tagLine);
-      });
-    } else {
-      narrative = this.documentation;
-    }
-    var paragraphs = narrative.split(/\n\n/);
-    this.summary_ = this.processTags(paragraphs[0]);
-    this.body_ = this.processTags(paragraphs.join("\n\n"));
-    this.tags_ = tags;
-  }
-
-  this.processed_ = true;
-};
-
-MethodJavadoc.prototype.summary = function() {
-  this.process_();
-  return this.summary_;
-};
-
-MethodJavadoc.prototype.body = function() {
-  this.process_();
-  return this.body_;
-};
-
-MethodJavadoc.prototype.tags = function() {
-  this.process_();
-  return this.tags_;
-};
