@@ -23,7 +23,7 @@ describe("Javadoc", function() {
       expect(methodJavadoc.body())
           .toEqual("Returns the content observers registered with the given [Uri](/reference/android/net/Uri.html \"android.net.Uri\").\n\n" +
               "Will be empty if no observer is registered.\n" +
-              "Links can span [OnCompletionListener](/reference/android/media/MediaPlayer/OnCompletionListener.html \"android.media.MediaPlayer.OnCompletionListener\") multiple lines.\n"
+              "Links can span [OnCompletionListener](/reference/android/media/MediaPlayer.OnCompletionListener.html \"android.media.MediaPlayer.OnCompletionListener\") multiple lines.\n"
           );
     });
 
@@ -92,6 +92,9 @@ describe("Javadoc", function() {
 
         expect(javadoc.urlFor('org.robolectric.Robolectric'))
             .toEqual('http://robolectric.org/javadoc/latest/org/robolectric/Robolectric.html');
+
+        expect(javadoc.urlFor('org.robolectric.Robolectric.InnerClass'))
+            .toEqual('http://robolectric.org/javadoc/latest/org/robolectric/Robolectric.InnerClass.html');
 
         expect(javadoc.urlFor('any.other.Robolectric'))
             .toEqual('/reference/any/other/Robolectric.html');

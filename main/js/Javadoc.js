@@ -33,10 +33,24 @@ Javadoc.prototype.urlFor = function(className, methodSignature) {
     return methodSignature;
   }
 
+  var parts = className.split(/\./);
+  var path = '';
+  var inClass = false;
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (path) {
+      path += inClass ? '.' : '/';
+    }
+    if (part.match(/^[A-Z]/)) {
+      inClass = true;
+    }
+    path += part;
+  }
+
   if (className.match(/^org\.robolectric\./)) {
-    return 'http://robolectric.org/javadoc/latest/' + className.replace(/\./g, '/') + '.html' + methodSignature;
+    return 'http://robolectric.org/javadoc/latest/' + path + '.html' + methodSignature;
   } else {
-    return '/reference/' + className.replace(/\./g, '/') + '.html' + methodSignature;
+    return '/reference/' + path + '.html' + methodSignature;
   }
 };
 
