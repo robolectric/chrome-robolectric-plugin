@@ -3,7 +3,7 @@
 
   "name": "Robolectric",
   "description": "Adds Robolectric documentation to the Android developer docs.",
-  "version": "0.2017.4271",
+  "version": "0.2017.5010",
   "icons": {
     "16": "main/images/robolectric-icon.png",
     "48": "main/images/robolectric-48.png",
@@ -23,9 +23,7 @@
     "storage",
     "activeTab",
     "http://robolectric.org/",
-    "https://robolectric.org/",
-    "https://robolectric.github.io/",
-    "https://localhost:8080/"
+    "https://robolectric.org/"
   ],
   "background": {
     "scripts": [
@@ -48,6 +46,10 @@
         "main/js/content-script.js"
       ],
       "run_at": "document_start"
+    },
+    {
+      "matches": ["*://robolectric.org/*"],
+      "css": ["main/css/robolectric-org.css"]
     }
   ]
 }

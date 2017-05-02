@@ -1,0 +1,3 @@
+.hide-if-chrome-extension-is-installed {
+    display: none;
+}
