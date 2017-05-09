@@ -139,4 +139,11 @@ describe("Javadoc", function() {
 
     });
   });
+
+  describe('#canonicalizeMethodSignature', function() {
+    it("adds spaces after commas and removes generics", function() {
+      expect(Javadoc.canonicalizeMethodSignature('join(java.util.List<java.lang.String>,java.lang.String)'))
+          .toEqual('join(java.util.List, java.lang.String)');
+    });
+  });
 });

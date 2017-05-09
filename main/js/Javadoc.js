@@ -206,7 +206,8 @@ ClassJavadoc.prototype.findMethod = function(signature) {
 function MethodJavadoc(signature, json, classJavadoc) {
   Javadoc.apply(this);
 
-  this.signature = signature;
+  this.fullSignature = signature;
+  this.signature = Javadoc.canonicalizeMethodSignature(signature);
   this.isImplementation = json.isImplementation;
   this.returnType = json.returnType;
 
@@ -222,3 +223,28 @@ function MethodJavadoc(signature, json, classJavadoc) {
 }
 
 MethodJavadoc.prototype = Object.create(Javadoc.prototype);
+
+// join(java.util.List<java.lang.String>,java.lang.String) -> join(java.util.List, java.lang.String)
+Javadoc.canonicalizeMethodSignature = function(signature, removeGenerics) {
+  signature = signature.replace(/,\s*/g, ', '); // one space after commas
+
+  // remove generics...
+  var s2 = '';
+  var nest = 0;
+  for (var i = 0; i < signature.length; i++) {
+    var c = signature.charAt(i);
+    switch (c) {
+      case '<':
+        nest++;
+        break;
+      case '>':
+        nest--;
+        break;
+      default:
+        if (nest === 0) s2 += c;
+    }
+  }
+  signature = s2;
+
+  return signature;
+};

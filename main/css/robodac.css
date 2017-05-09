@@ -1,7 +1,7 @@
 .cts-results {
     float: right;
     font-size: 0.6em;
-    border: 1px dashed #7FC06B;
+    border: 1px dashed #7fc06b;
     background: #cbf0c0;
     padding: 1px;
     line-height: 1em;
@@ -27,7 +27,7 @@
     z-index: 100;
     background: white url(http://robolectric.org//images/robolectric-stacked.png) no-repeat fixed padding-box 95% 8%;
     padding: 1em;
-    border: 3px solid #7FC06B;
+    border: 3px solid #7fc06b;
     overflow: scroll;
 }
 
@@ -36,15 +36,16 @@
     margin: 0;
 }
 
-div.robolectric-shadow-api, div.robolectric-method-extra, div.robolectric-class-extra {
+div.robolectric-doc {
     position: relative;
+    border-left: 3px double #7fc06b;
+    padding-left: .4em;
+    margin-left: -.4em;
 }
 
-div.robolectric-shadow-api img.robolectric-logo,
-div.robolectric-class-extra img.robolectric-logo,
-div.robolectric-method-extra img.robolectric-logo {
+div.robolectric-doc img.robolectric-logo {
     position: absolute;
-    left: -44px;
+    left: -36px;
 }
 
 span.robolectric-shadow-of {

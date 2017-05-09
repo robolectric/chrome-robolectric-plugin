@@ -190,35 +190,46 @@ RoboPage.prototype.tagTables = function(javadoc) {
   var returnRows = [];
   var throwsRows = [];
   var authorRows = [];
+  var seeRows = [];
   var extras = [];
 
   javadoc.tags().forEach(function(tag) {
-    var match = tag.match(/@(\w+)\s+(.*)/);
+    var match = tag.match(/(@\w+)\s+(.*)/);
     var tagName = match[1];
     var rest = match[2];
 
     switch (tagName) {
-      case 'deprecated':
+      case '@deprecated':
         deprecatedRows.push([this.tagMdToAppendable(javadoc, rest)]);
         break;
-      case 'param':
+      case '@param':
         var tagParts = rest.split(/ /);
         var paramName = tagParts.shift();
         var paramDesc = tagParts.join(' ');
         var html = this.tagMdToAppendable(javadoc, paramDesc);
         paramRows.push([domNode('code', {}, paramName), html]);
         break;
-      case 'return':
+      case '@return':
         returnRows.push([this.domClassNames(javadoc.returnType), this.tagMdToAppendable(javadoc, rest)]);
         break;
-      case 'throws':
+      case '@throws':
         var tagParts = rest.split(/ /);
         var throwsType = tagParts.shift();
         var throwsDesc = tagParts.join(' ');
         throwsRows.push([this.domClassNames(throwsType), this.tagMdToAppendable(javadoc, throwsDesc)]);
         break;
-      case 'author':
+      case '@author':
         authorRows.push([this.tagMdToAppendable(javadoc, rest)]);
+        break;
+      case '@see':
+        var methodSig = javadoc.expandMethodSignature(rest);
+        var parts = methodSig.split(/#/);
+        var classPart = parts[0];
+        var methodPart = parts[1];
+        if (classPart === '') {
+          methodPart = '#shadow:' + Javadoc.canonicalizeMethodSignature(methodPart);
+        }
+        seeRows.push([classPart + methodPart, rest]);
         break;
       default:
         var p = domNode('p', {}, tagName + ': ' + rest);
@@ -249,6 +260,21 @@ RoboPage.prototype.tagTables = function(javadoc) {
     tables.push(this.table(domNode('th', {}, 'Author'), authorRows));
   }
 
+  if (seeRows.length > 0) {
+    tables.push(domNode('div', {},
+        domNode('p', {}, domNode('b', {}, 'See also:')),
+        domNode('ul', {'class': 'nolist'},
+            seeRows.map(function(row) {
+              return domNode('li', {},
+                  domNode('code', {},
+                      domNode('a', {'href': row[0]}, row[1])
+                  )
+              )
+            })
+        )
+    ));
+  }
+
   for (var i = 0; i < extras.length; i++) {
     tables.push(extras[i]);
   }
@@ -260,7 +286,7 @@ RoboPage.prototype.insertShadowMethod = function(methodJavadoc, insertionPoint) 
   var anchor = domNode('a', {'name': 'shadow:' + methodJavadoc.signature});
   insertionPoint.parentNode.insertBefore(anchor, insertionPoint);
 
-  var methodDiv = domNode('div', {'class': 'robolectric-shadow-api api apilevel-0'},
+  var methodDiv = domNode('div', {'class': 'robolectric-doc robolectric-shadow-api api apilevel-0'},
       domNode('img', {'src': 'https://s3.amazonaws.com/robolectric/images/robolectric-icon@2x.png', 'alt': '', 'class': 'robolectric-logo'}),
       domNode('h3', {'class': 'api-name'},
           domNode('span', {'class': 'robolectric-shadow-of'}, 'shadowOf(' + this.androidVarName + ').'),
@@ -343,7 +369,7 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
     if (insertionPoint) {
       var mdText = classJavadoc.processTags(classJavadoc.body());
 
-      var docs = domNode('div', {'class': 'robolectric-class-extra'},
+      var docs = domNode('div', {'class': 'robolectric-doc robolectric-class-extra'},
           domNode('img', {'src': 'https://s3.amazonaws.com/robolectric/images/robolectric-icon@2x.png', 'alt': '', 'class': 'robolectric-logo'}),
           this.html(this.markdownToHtml(mdText)));
 
@@ -352,7 +378,8 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
 
       var tagTables = this.tagTables(classJavadoc);
       for (i = 0; i < tagTables.length; i++) {
-        insertionPoint.parentNode.insertBefore(tagTables[i], insertionPoint);
+        docs.appendChild(tagTables[i]);
+        // insertionPoint.parentNode.insertBefore(tagTables[i], insertionPoint);
       }
     }
   }
@@ -388,7 +415,7 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
 
         var anchorDiv = memberDiv.previousElementSibling;
         var docHtml = this.markdownToHtml('_Robolectric Notes:_ ' + implMethodJavadoc.body());
-        var newDiv = domNode('div', {'class': 'robolectric-method-extra method'},
+        var newDiv = domNode('div', {'class': 'robolectric-doc robolectric-method-extra method'},
             domNode('img', {'src': 'https://s3.amazonaws.com/robolectric/images/robolectric-icon@2x.png', 'alt': '', 'class': 'robolectric-logo'}),
             this.html(docHtml));
         memberDiv.insertBefore(newDiv, lastChild.nextSibling);

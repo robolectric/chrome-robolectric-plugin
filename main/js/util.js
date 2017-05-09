@@ -7,10 +7,16 @@ function domNode(name, attrs) {
 
   for (var i = 2; i < arguments.length; i++) {
     var child = arguments[i];
-    if (typeof child == 'string') {
-      child = document.createTextNode(child);
+    if (child instanceof Array) {
+      for (var j = 0; j < child.length; j++) {
+        el.appendChild(child[j]);
+      }
+    } else {
+      if (typeof child === 'string') {
+        child = document.createTextNode(child);
+      }
+      el.appendChild(child);
     }
-    el.appendChild(child);
   }
 
   return el;
