@@ -53,3 +53,9 @@ span.robolectric-shadow-of {
     font-style: italic;
     font-stretch: condensed;
 }
+
+.devsite-nav-title img.robolectric-logo {
+    width: 12px;
+    position: absolute;
+    right: 0;
+}

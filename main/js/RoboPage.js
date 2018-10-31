@@ -64,18 +64,14 @@ RoboPage.prototype.getCtsResults = function(callback) {
   this.sendBackgroundMessage('getCtsResults', [], callback);
 };
 
+RoboPage.shadowOfMethodRE = /^shadowOf\([^)]+\)\.(.*)/;
 RoboPage.prototype.init = function() {
   this.connectToBackground();
 
-  this.roboPanel = this.html('<div style="position: absolute; width: 140px; right: 2em; top: 6em; z-index: 100;"/>');
+  this.roboPanel = this.html('<div style="position: absolute; width: 140px; right: 2em; top: 11em; z-index: 100;"/>');
   this.roboPanel.innerHTML = '<img src="https://s3.amazonaws.com/robolectric/images/robolectric-128.png" alt="Robolectric" style="opacity: .1;"/>';
-  this.whenReady(function() {
-    document.body.appendChild(this.roboPanel);
-  }.bind(this));
 
-  var roboLogo = this.roboPanel.firstElementChild;
-
-  this.getCtsResults(this.gotCtsResults.bind(this));
+  // this.getCtsResults(this.gotCtsResults.bind(this));
 
   if (document.location.pathname.startsWith('/reference/')) {
     var classNameParts = document.location.pathname.replace(/\.html$/, '').split('/').slice(2);
@@ -86,8 +82,14 @@ RoboPage.prototype.init = function() {
   }
 
   if (this.androidClassName) {
+    this.whenReady(function() {
+      document.body.appendChild(this.roboPanel);
+    }.bind(this));
+
+    var roboLogo = this.roboPanel.firstElementChild;
+
     var className = this.androidClassName;
-    this.roboPanel.innerHTML += '<br/>' + className;
+    // this.roboPanel.innerHTML += '<br/>' + className;
 
     this.getJavadoc(className, function(javaDoc) {
       var classJavadoc = new ClassJavadoc(javaDoc);
@@ -95,6 +97,10 @@ RoboPage.prototype.init = function() {
       this.whenReady(function() {
         this.decorateJavadocPage(classJavadoc);
         roboLogo.style.opacity = '.25';
+
+        setTimeout(function() {
+          this.fixShadowOfNavLinks();
+        }.bind(this), 1000);
       }.bind(this));
     }.bind(this));
   }
@@ -103,7 +109,7 @@ RoboPage.prototype.init = function() {
 RoboPage.htmlRE = /<[a]\s+href=['"]([^'"]+)['"]>([^<]+)<\/a>/g;
 RoboPage.httpRE = /\/reference\/(.+)\.html/;
 RoboPage.arrayRE = /([\[\]]+)$/;
-RoboPage.pageSignatureRE = /^([^\s]+)\s+([^\s]+)\s*\(([^)]*)\)/;
+RoboPage.pageSignatureRE = /^(?:public |protected )?([^\s]+)\s+([^\s]+)\s*\(([^)]*)\)/;
 
 RoboPage.prototype.extractSignature = function(html) {
   html = html.replace(RoboPage.htmlRE, function(full, url, str) {
@@ -137,7 +143,7 @@ RoboPage.prototype.methodSummaryRow = function(methodJavadoc) {
   });
 
   var td2;
-  var row = domNode('tr', {'class': 'api apilevel-0 shadow'},
+  var row = domNode('tr', {'class': 'api apilevel-0 test-api'},
       domNode('td', {},
           domNode('code', {},
               this.padRight_(modifiers.join(' ')),
@@ -147,7 +153,7 @@ RoboPage.prototype.methodSummaryRow = function(methodJavadoc) {
       td2 = domNode('td', {'width': '100%'},
           domNode('code', {},
               domNode('span', {'class': 'robolectric-shadow-of'}, 'shadowOf(' + this.androidVarName + ').'),
-              domNode('a', {'href': '#shadow:' + methodJavadoc.signature},
+              domNode('a', {'href': '#test-api:' + methodJavadoc.signature},
                   methodJavadoc.name
               ),
               '(',
@@ -227,7 +233,7 @@ RoboPage.prototype.tagTables = function(javadoc) {
         var classPart = parts[0];
         var methodPart = parts[1];
         if (classPart === '') {
-          methodPart = '#shadow:' + Javadoc.canonicalizeMethodSignature(methodPart);
+          methodPart = '#test-api:' + Javadoc.canonicalizeMethodSignature(methodPart);
         }
         seeRows.push([classPart + methodPart, rest]);
         break;
@@ -282,17 +288,17 @@ RoboPage.prototype.tagTables = function(javadoc) {
   return tables;
 };
 
-RoboPage.prototype.insertShadowMethod = function(methodJavadoc, insertionPoint) {
-  var anchor = domNode('a', {'name': 'shadow:' + methodJavadoc.signature});
+RoboPage.prototype.insertTestApiMethod = function(methodJavadoc, insertionPoint) {
+  var anchor = domNode('a', {'name': 'test-api:' + methodJavadoc.signature});
   insertionPoint.parentNode.insertBefore(anchor, insertionPoint);
 
-  var methodDiv = domNode('div', {'class': 'robolectric-doc robolectric-shadow-api api apilevel-0'},
+  var methodDiv = domNode('div', {'class': 'robolectric-doc robolectric-test-api api apilevel-0'},
       domNode('img', {'src': 'https://s3.amazonaws.com/robolectric/images/robolectric-icon@2x.png', 'alt': '', 'class': 'robolectric-logo'}),
       domNode('h3', {'class': 'api-name'},
           domNode('span', {'class': 'robolectric-shadow-of'}, 'shadowOf(' + this.androidVarName + ').'),
           methodJavadoc.name),
       domNode('div', {'class': 'api-level'},
-          domNode('div', {}, 'Robolectric extension')
+          domNode('div', {}, 'Robolectric Test API')
       ),
       domNode('pre', {'class': 'api-signature no-pretty-print'},
           this.padRight_(methodJavadoc.modifiers.join(' ')),
@@ -340,17 +346,17 @@ RoboPage.prototype.table = function(headers, rows) {
 };
 
 RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
-  var allShadowMethods = classJavadoc.methods.filter(function(methodJavadoc) {
+  var allTestApiMethods = classJavadoc.methods.filter(function(methodJavadoc) {
     return !methodJavadoc.isImplementation && methodJavadoc.isPublic;
   });
-  var shadowMethodIndex = 0;
+  var testApiMethodIndex = 0;
 
-  if (allShadowMethods.length > 0) {
+  if (allTestApiMethods.length > 0) {
     var pubMethodsAnchor = document.querySelector("#api-info-block a[href='#pubmethods']");
     var insertionPoint = pubMethodsAnchor.nextSibling;
     pubMethodsAnchor.parentNode.insertBefore(document.createTextNode(' | '), insertionPoint);
     pubMethodsAnchor.parentNode.insertBefore(
-        domNode('a', {'href': '#shadowmethods'}, 'Shadow Methods'),
+        domNode('a', {'href': '#testapimethods'}, 'Test API Methods'),
         insertionPoint);
   }
 
@@ -384,20 +390,20 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
     }
   }
 
-  // insert shadow methods and add notes to @Implemented methods...
-  document.querySelectorAll('div.api pre.api-signature').forEach(function(node) {
+  // insert test API methods and add notes to @Implemented methods...
+  document.querySelectorAll('.api-signature').forEach(function(node) {
     var html = node.innerHTML;
     var signature = this.extractSignature(html);
 
     if (signature) {
-      var insertionPoint = node.parentElement.previousElementSibling;
+      var insertionPoint = node.parentElement;
 
-      // insert shadow methods inline with other methods...
-      for (var i = shadowMethodIndex; i < allShadowMethods.length; i++) {
-        var methodJavadoc = allShadowMethods[i];
+      // insert test API methods inline with other methods...
+      for (var i = testApiMethodIndex; i < allTestApiMethods.length; i++) {
+        var methodJavadoc = allTestApiMethods[i];
         if (methodJavadoc.signature < signature) {
-          this.insertShadowMethod(methodJavadoc, insertionPoint);
-          shadowMethodIndex = i + 1;
+          this.insertTestApiMethod(methodJavadoc, insertionPoint);
+          testApiMethodIndex = i + 1;
         } else {
           break;
         }
@@ -409,7 +415,7 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
         var memberDiv = node.parentElement;
 
         var lastChild = memberDiv.lastElementChild;
-        while (lastChild.tagName == 'TABLE') {
+        while (lastChild.tagName === 'TABLE') {
           lastChild = lastChild.previousElementSibling;
         }
 
@@ -424,17 +430,34 @@ RoboPage.prototype.decorateJavadocPage = function(classJavadoc) {
     }
   }.bind(this));
 
-  if (allShadowMethods.length > 0) {
+  if (allTestApiMethods.length > 0) {
     var pubMethodsTable = document.getElementById('pubmethods');
-    var shadowMethodsTable = this.html('<table id="shadowmethods" class="responsive methods robolectric-shadow"><tbody><tr><th colspan="2"><h3>Shadow methods</h3></th></tr></tbody></table>');
-    pubMethodsTable.parentNode.insertBefore(shadowMethodsTable, pubMethodsTable.nextElementSibling);
-    allShadowMethods.forEach(function(methodJavadoc) {
+    var testApiMethodsTable = this.html('<table id="testapimethods" class="responsive methods robolectric-test-api-methods"><tbody><tr><th colspan="2"><h3>Test API methods</h3></th></tr></tbody></table>');
+    pubMethodsTable.parentNode.insertBefore(testApiMethodsTable, pubMethodsTable.nextElementSibling);
+    allTestApiMethods.forEach(function(methodJavadoc) {
       if (methodJavadoc.isImplementation) return;
       if (!methodJavadoc.isPublic()) return;
       var row = this.methodSummaryRow(methodJavadoc);
-      shadowMethodsTable.firstElementChild.appendChild(row);
+      testApiMethodsTable.firstElementChild.appendChild(row);
     }.bind(this));
   }
+};
+
+RoboPage.prototype.fixShadowOfNavLinks = function() {
+  document.querySelectorAll('a.devsite-nav-title').forEach(function(node) {
+    var match = RoboPage.shadowOfMethodRE.exec(node.innerText);
+    if (match) {
+      node.innerText = match[1];
+      node.insertBefore(
+          domNode('img', {
+            'src': 'https://s3.amazonaws.com/robolectric/images/robolectric-icon@2x.png',
+            'alt': '',
+            'class': 'robolectric-logo'
+          }),
+          node.firstChild
+      );
+    }
+  });
 };
 
 RoboPage.prototype.markdownToHtml = function(mdText) {
